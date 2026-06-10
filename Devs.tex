@@ -9,6 +9,7 @@
 \usepackage{booktabs}
 \usepackage{hyperref}
 \usepackage{float}
+\usepackage{caption}
 
 % Para los bloques CML-DEVS usamos alltt, que permite
 % mezclar texto normal con comandos LaTeX libremente.
@@ -23,6 +24,9 @@
 }
 
 % Comandos de conveniencia para CML-DEVS
+\newcommand{\cmlwedge}{$\wedge$}
+\newcommand{\cmlneq}{$\neq$}
+\newcommand{\cmlvee}{$\vee$}
 \newcommand{\kw}[1]{\textbf{#1}}          % palabras clave en negrita
 \newcommand{\cmlR}{$\mathbb{R}$}
 \newcommand{\cmlTime}{\textbf{Time}}
@@ -208,5 +212,88 @@ el caudal real suministrado al paciente.
 
     \item \textbf{Tipos de datos}: Se utiliza $\mathbb{R}$ para los caudales
     (0 a 200 ml/h) y \texttt{\{signal\}} para el evento discreto de detención.
+\end{enumerate}
+```latex
+\section{Módulo de Alarmas}
+
+El modelo \textbf{ModuloAlarmas} gestiona las notificaciones hacia el personal médico,
+emitiendo alertas y manteniendo un ciclo de retransmisión para las alarmas críticas
+no confirmadas.
+
+\begin{center}
+\begin{cmldevs}
+\kw{atomic} ModuloAlarmas \kw{is} <X, Y, S, \dint{}, \dext{}, \clambda{}, \cmlta{}> \kw{where}
+\kw{S is}
+    tipoAlarma : \{BAJA, MEDIA, CRITICA, NINGUNA\};
+    fase       : \{OCIOSO, NOTIFICANDO, ESPERANDO\_CONF, REPETIENDO\};
+    \cmlsigma{}        : \cmlTime{};  \cmlcomment{-- control del tiempo de avance}
+\kw{end S}
+\kw{X is}
+    alarmaBaja           : \{signal\};
+    alarmaMedia          : \{signal\};
+    alarmaCritica        : \{signal\};
+    confirmacionEnfermero : \{signal\};
+\kw{end X}
+\kw{Y is}
+    notificacionAlarma : \kw{Text};  \cmlcomment{-- mensaje hacia el entorno exterior}
+\kw{end Y}
+\dext{}((tipoAlarma, fase, \cmlsigma{}), e, (puerto, valor)) \kw{is}
+    \kw{defcases}
+        tipoAlarma = CRITICA; fase = NOTIFICANDO; \cmlsigma{} = 0.0;
+            \kw{if} (puerto = alarmaCritica)
+        tipoAlarma = MEDIA;   fase = NOTIFICANDO; \cmlsigma{} = 0.0;
+            \kw{if} (puerto = alarmaMedia)
+        tipoAlarma = BAJA;    fase = NOTIFICANDO; \cmlsigma{} = 0.0;
+            \kw{if} (puerto = alarmaBaja)
+        tipoAlarma = NINGUNA; fase = OCIOSO; \cmlsigma{} = infinity;
+            \kw{if} (puerto = confirmacionEnfermero \cmlwedge{} tipoAlarma = CRITICA)
+        \cmlsigma{} = \cmlsigma{} - e;
+            \kw{if} (puerto = confirmacionEnfermero \cmlwedge{} tipoAlarma \cmlneq{} CRITICA)
+    \kw{end defcases}
+\kw{end} \dext{}
+\dint{}(tipoAlarma, fase, \cmlsigma{}) \kw{is}
+    \kw{defcases}
+        fase = ESPERANDO\_CONF; \cmlsigma{} = 30.0;
+            \kw{if} (tipoAlarma = CRITICA \cmlwedge{} fase = NOTIFICANDO)
+        fase = REPETIENDO; \cmlsigma{} = 10.0;
+            \kw{if} (tipoAlarma = CRITICA \cmlwedge{} fase = ESPERANDO\_CONF)
+        \cmlsigma{} = 10.0;
+            \kw{if} (tipoAlarma = CRITICA \cmlwedge{} fase = REPETIENDO)
+        tipoAlarma = NINGUNA; fase = OCIOSO; \cmlsigma{} = infinity;
+            \kw{if} (tipoAlarma = MEDIA \cmlvee{} tipoAlarma = BAJA)
+    \kw{end defcases}
+\kw{end} \dint{}
+\clambda{}(tipoAlarma, fase, \cmlsigma{}) \kw{is}
+    notificacionAlarma = "ATENCION: " + tipoAlarma;
+        \kw{if} (fase = NOTIFICANDO \cmlvee{} fase = REPETIENDO)
+\kw{end} \clambda{}
+\cmlta{}(tipoAlarma, fase, \cmlsigma{}) \kw{is}
+    \cmlsigma{};
+\kw{end} \cmlta{}
+\kw{end atomic}
+\end{cmldevs}
+\captionof{figure}{Especificación CML-DEVS: Módulo de Alarmas}
+\label{fig:modulo-alarmas}
+\end{center}
+
+\subsection*{Análisis del modelo}
+
+\begin{enumerate}
+    \item \textbf{Estados transitorios} ($ta = 0$): Cuando llega una alarma por
+    $\delta_{\mathit{ext}}$, el modelo pasa a la fase \texttt{NOTIFICANDO} con
+    $\sigma = 0$, obligando al simulador a ejecutar $\lambda$ y luego
+    $\delta_{\mathit{int}}$ de forma inmediata.
+
+    \item \textbf{Lógica de repetición}: Si transcurren 30 segundos sin confirmación,
+    $\delta_{\mathit{int}}$ cambia la fase a \texttt{REPETIENDO} y establece un ciclo
+    periódico de $\sigma = 10$ segundos, cumpliendo el requisito temporal especificado.
+
+    \item \textbf{Gestión de confirmación}: Al recibir \texttt{confirmacionEnfermero}
+    con una alarma crítica activa, $\delta_{\mathit{ext}}$ limpia el estado y pone al
+    modelo en reposo ($\sigma = \infty$), deteniendo cualquier ciclo de repetición.
+
+    \item \textbf{Modularidad}: Este modelo se acopla con las salidas del Controlador
+    de Bomba y proyecta \texttt{notificacionAlarma} como salida externa del sistema
+    global para ser registrada o visualizada.
 \end{enumerate}
 \end{document}
