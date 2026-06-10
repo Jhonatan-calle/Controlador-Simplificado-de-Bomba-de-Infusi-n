@@ -1,0 +1,155 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{float}
+
+% Para los bloques CML-DEVS usamos alltt, que permite
+% mezclar texto normal con comandos LaTeX libremente.
+\usepackage{alltt}
+\usepackage{xcolor}
+
+\geometry{
+    top=2.5cm,
+    bottom=2.5cm,
+    left=3cm,
+    right=3cm
+}
+
+% Comandos de conveniencia para CML-DEVS
+\newcommand{\kw}[1]{\textbf{#1}}          % palabras clave en negrita
+\newcommand{\cmlR}{$\mathbb{R}$}
+\newcommand{\cmlTime}{\textbf{Time}}
+\newcommand{\cmlsigma}{$\sigma$}
+\newcommand{\dint}{$\delta_{\mathit{int}}$}
+\newcommand{\dext}{$\delta_{\mathit{ext}}$}
+\newcommand{\clambda}{$\lambda$}
+\newcommand{\cmlta}{\textbf{ta}}
+\newcommand{\cmlcomment}[1]{\textit{\textcolor{gray}{#1}}}
+
+% Entorno para bloques CML-DEVS (imita el estilo de la tesis Hollmann)
+\newenvironment{cmldevs}{%
+  \begin{alltt}\small%
+}{%
+  \end{alltt}%
+}
+
+% ----------------------------------------------------------------
+
+\title{
+    \large Simulación de Sistemas \\[0.5em]
+    \LARGE \textbf{Proyecto de Simulación} \\[0.3em]
+    \large Sistema de Tiempo Real: Controlador Simplificado de Bomba de Infusión \\[1em]
+    \normalsize Especificación DEVS de los Modelos Atómicos
+}
+
+\author{
+    Jhonatan Calle Galeano \and Hernan Jara
+}
+
+\date{}
+
+% ================================================================
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+% ----------------------------------------------------------------
+\section{Generador de Órdenes Médicas}
+
+El modelo \textbf{GeneradorOrdenes} es un modelo atómico autónomo (sin entradas)
+que genera periódicamente eventos \texttt{ordenMedica}, indicando el caudal objetivo
+que debe administrar la bomba. Las órdenes pueden generarse de manera determinística
+o estocástica según los escenarios definidos.
+
+\begin{figure}[H]
+\begin{cmldevs}
+\kw{atomic} GeneradorOrdenes \kw{is} <Y, S, \dint{}, \clambda{}, \cmlta{}> \kw{where}
+\kw{S is}
+    caudalProximo : \cmlR{};    \cmlcomment{-- caudal objetivo (0 a 200 ml/h)}
+    interarribo   : \cmlTime{};  \cmlcomment{-- tiempo hasta la siguiente orden}
+    \cmlsigma{}             : \cmlTime{};  \cmlcomment{-- variable de avance de tiempo}
+\kw{end S}
+\kw{Y is}
+    ordenMedica : \cmlR{};      \cmlcomment{-- puerto de salida: valor del caudal}
+\kw{end Y}
+\dint{}(caudalProximo, interarribo, \cmlsigma{}) \kw{is}
+    \cmlcomment{-- A definir en la implementacion: puede ser deterministica}
+    \cmlcomment{-- (valores fijos) o estocastica (usando distribuciones)}
+    caudalProximo = next\_caudal\_logic();
+    interarribo   = next\_time\_logic();
+    \cmlsigma{}   = interarribo;
+\kw{end} \dint{}
+\clambda{}(caudalProximo, interarribo, \cmlsigma{}) \kw{is}
+    \cmlcomment{-- Emite el caudal objetivo por el puerto de salida}
+    ordenMedica = caudalProximo;
+\kw{end} \clambda{}
+\cmlta{}(caudalProximo, interarribo, \cmlsigma{}) \kw{is}
+    \cmlsigma{};
+\kw{end} \cmlta{}
+\kw{end atomic}
+\end{cmldevs}
+\caption{Especificación CML-DEVS: Generador de Órdenes Médicas}
+\label{fig:generador-ordenes}
+\end{figure}
+
+
+\section{Sensor de Flujo}
+
+El modelo \textbf{SensorFlujo} actúa como puente entre el actuador y el controlador,
+reportando periódicamente el caudal real cada 1 segundo exacto.
+
+\begin{figure}[H]
+\begin{cmldevs}
+\kw{atomic} SensorFlujo \kw{is} <Y, S, \dint{}, \clambda{}, \cmlta{}> \kw{where}
+\kw{S is}
+    caudalMedido : \cmlR{};  \cmlcomment{-- valor de caudal generado internamente}
+    \cmlsigma{}          : \cmlTime{}; \cmlcomment{-- controla el periodo de muestreo (1 s)}
+\kw{end S}
+\kw{Y is}
+    sensorFlujo  : \cmlR{};  \cmlcomment{-- medicion enviada al Controlador}
+\kw{end Y}
+\dint{}(caudalMedido, \cmlsigma{}) \kw{is}
+    \cmlcomment{-- Genera el siguiente valor de caudal y reinicia el temporizador}
+    caudalMedido = next\_caudal\_logic();
+    \cmlsigma{}          = 1.0;
+\kw{end} \dint{}
+\clambda{}(caudalMedido, \cmlsigma{}) \kw{is}
+    \cmlcomment{-- Emite el valor medido antes de la transicion interna}
+    sensorFlujo = caudalMedido;
+\kw{end} \clambda{}
+\cmlta{}(caudalMedido, \cmlsigma{}) \kw{is}
+    \cmlsigma{};
+\kw{end} \cmlta{}
+\kw{end atomic}
+\end{cmldevs}
+\caption{Especificación CML-DEVS: Sensor de Flujo}
+\label{fig:sensor-flujo}
+\end{figure}
+
+\subsection*{Análisis del modelo}
+
+\begin{enumerate}
+    \item \textbf{Frecuencia de muestreo} ($\mathit{ta}$ y $\delta_{\mathit{int}}$): El requisito establece
+    que el sensor debe informar el caudal real cada 1 segundo. Por ello, $\sigma$ se
+    inicializa y resetea en \texttt{1.0} en cada transición interna.
+
+    \item \textbf{Manejo de entradas} ($\delta_{\mathit{ext}}$): Al recibir \texttt{caudalActual}
+    desde el actuador, la asignación $\sigma = \sigma - e$ asegura que la llegada de
+    un dato externo no desvíe el reporte periódico; el sensor actualiza su registro
+    interno y sigue esperando a que se cumpla el segundo original.
+
+    \item \textbf{Puertos} ($X$ e $Y$): Se definen puertos de tipo $\mathbb{R}$ para la
+    comunicación modular dentro del modelo acoplado.
+
+    \item \textbf{Estado inicial} ($S$): Se asume \texttt{caudalMedido} $= 0.0$ y
+    $\sigma = 1.0$, indicando que la primera medición ocurrirá exactamente un segundo
+    después del arranque.
+\end{enumerate}
+\end{document}
