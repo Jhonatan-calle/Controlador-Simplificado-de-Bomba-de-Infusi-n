@@ -213,7 +213,6 @@ el caudal real suministrado al paciente.
     \item \textbf{Tipos de datos}: Se utiliza $\mathbb{R}$ para los caudales
     (0 a 200 ml/h) y \texttt{\{signal\}} para el evento discreto de detención.
 \end{enumerate}
-```latex
 \section{Módulo de Alarmas}
 
 El modelo \textbf{ModuloAlarmas} gestiona las notificaciones hacia el personal médico,
@@ -229,25 +228,21 @@ no confirmadas.
     \cmlsigma{}        : \cmlTime{};  \cmlcomment{-- control del tiempo de avance}
 \kw{end S}
 \kw{X is}
-    alarmaBaja           : \{signal\};
-    alarmaMedia          : \{signal\};
-    alarmaCritica        : \{signal\};
-    confirmacionEnfermero : \{signal\};
+    alarma               : \{baja, media, critica\};  \cmlcomment{-- niveles de alarma}
+    confirmacionEnfermero : \{signal\};               \cmlcomment{-- confirmacion manual}
 \kw{end X}
 \kw{Y is}
     notificacionAlarma : \kw{Text};  \cmlcomment{-- mensaje hacia el entorno exterior}
 \kw{end Y}
 \dext{}((tipoAlarma, fase, \cmlsigma{}), e, (puerto, valor)) \kw{is}
     \kw{defcases}
-        tipoAlarma = CRITICA; fase = NOTIFICANDO; \cmlsigma{} = 0.0;
-            \kw{if} (puerto = alarmaCritica)
-        tipoAlarma = MEDIA;   fase = NOTIFICANDO; \cmlsigma{} = 0.0;
-            \kw{if} (puerto = alarmaMedia)
-        tipoAlarma = BAJA;    fase = NOTIFICANDO; \cmlsigma{} = 0.0;
-            \kw{if} (puerto = alarmaBaja)
+        fase = NOTIFICANDO; \cmlsigma{} = 0.0;
+            \kw{if} (puerto = alarma \cmlwedge{} valor = critica) tipoAlarma = CRITICA;
+            \kw{if} (puerto = alarma \cmlwedge{} valor = media)   tipoAlarma = MEDIA;
+            \kw{if} (puerto = alarma \cmlwedge{} valor = baja)    tipoAlarma = BAJA;
         tipoAlarma = NINGUNA; fase = OCIOSO; \cmlsigma{} = infinity;
             \kw{if} (puerto = confirmacionEnfermero \cmlwedge{} tipoAlarma = CRITICA)
-        \cmlsigma{} = \cmlsigma{} - e;
+        \cmlsigma{} = \cmlsigma{} - e;  \cmlcomment{-- ignorar si no hay alarma critica activa}
             \kw{if} (puerto = confirmacionEnfermero \cmlwedge{} tipoAlarma \cmlneq{} CRITICA)
     \kw{end defcases}
 \kw{end} \dext{}
@@ -264,7 +259,7 @@ no confirmadas.
     \kw{end defcases}
 \kw{end} \dint{}
 \clambda{}(tipoAlarma, fase, \cmlsigma{}) \kw{is}
-    notificacionAlarma = "ATENCION: " + tipoAlarma;
+    notificacionAlarma = "ALERTA: " + tipoAlarma;
         \kw{if} (fase = NOTIFICANDO \cmlvee{} fase = REPETIENDO)
 \kw{end} \clambda{}
 \cmlta{}(tipoAlarma, fase, \cmlsigma{}) \kw{is}
@@ -279,21 +274,19 @@ no confirmadas.
 \subsection*{Análisis del modelo}
 
 \begin{enumerate}
-    \item \textbf{Estados transitorios} ($ta = 0$): Cuando llega una alarma por
-    $\delta_{\mathit{ext}}$, el modelo pasa a la fase \texttt{NOTIFICANDO} con
-    $\sigma = 0$, obligando al simulador a ejecutar $\lambda$ y luego
-    $\delta_{\mathit{int}}$ de forma inmediata.
+    \item \textbf{Puerto unificado de alarma}: Se unifica la recepción en un solo
+    puerto \texttt{alarma} con valores enumerados \texttt{\{baja, media, critica\}},
+    simplificando el acoplamiento con el controlador.
 
-    \item \textbf{Lógica de repetición}: Si transcurren 30 segundos sin confirmación,
-    $\delta_{\mathit{int}}$ cambia la fase a \texttt{REPETIENDO} y establece un ciclo
-    periódico de $\sigma = 10$ segundos, cumpliendo el requisito temporal especificado.
+    \item \textbf{Estados transitorios} ($ta = 0$): Al recibir cualquier alarma,
+    $\sigma = 0$ fuerza la ejecución inmediata de $\lambda$ y $\delta_{\mathit{int}}$.
+
+    \item \textbf{Lógica de repetición}: Tras 30 segundos sin confirmación,
+    $\delta_{\mathit{int}}$ pasa a la fase \texttt{REPETIENDO} con ciclos de
+    $\sigma = 10$ segundos, cumpliendo el requisito temporal especificado.
 
     \item \textbf{Gestión de confirmación}: Al recibir \texttt{confirmacionEnfermero}
-    con una alarma crítica activa, $\delta_{\mathit{ext}}$ limpia el estado y pone al
-    modelo en reposo ($\sigma = \infty$), deteniendo cualquier ciclo de repetición.
-
-    \item \textbf{Modularidad}: Este modelo se acopla con las salidas del Controlador
-    de Bomba y proyecta \texttt{notificacionAlarma} como salida externa del sistema
-    global para ser registrada o visualizada.
+    con alarma crítica activa, el modelo pasa a reposo ($\sigma = \infty$),
+    deteniendo el ciclo de repetición.
 \end{enumerate}
 \end{document}
