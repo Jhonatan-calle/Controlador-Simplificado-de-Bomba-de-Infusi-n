@@ -136,20 +136,10 @@ reportando periódicamente el caudal real cada 1 segundo exacto.
 \subsection*{Análisis del modelo}
 
 \begin{enumerate}
-    \item \textbf{Frecuencia de muestreo} ($\mathit{ta}$ y $\delta_{\mathit{int}}$): El requisito establece
-    que el sensor debe informar el caudal real cada 1 segundo. Por ello, $\sigma$ se
-    inicializa y resetea en \texttt{1.0} en cada transición interna.
+    \item \textbf{Frecuencia de muestreo} ($\mathit{ta}$ y $\delta_{\mathit{int}}$): El requisito establece que el sensor debe informar el caudal real cada 1 segundo. Por ello, $\sigma$ se inicializa y resetea en \texttt{1.0} en cada transición interna.
 
-    \item \textbf{Manejo de entradas} ($\delta_{\mathit{ext}}$): Al recibir \texttt{caudalActual}
-    desde el actuador, la asignación $\sigma = \sigma - e$ asegura que la llegada de
-    un dato externo no desvíe el reporte periódico; el sensor actualiza su registro
-    interno y sigue esperando a que se cumpla el segundo original.
+    \item \textbf{Puertos} ($Y$): Se define el puerto de tipo $\mathbb{R}$ para la  comunicación modular dentro del modelo acoplado.
 
-    \item \textbf{Puertos} ($X$ e $Y$): Se definen puertos de tipo $\mathbb{R}$ para la
-    comunicación modular dentro del modelo acoplado.
-
-    \item \textbf{Estado inicial} ($S$): Se asume \texttt{caudalMedido} $= 0.0$ y
-    $\sigma = 1.0$, indicando que la primera medición ocurrirá exactamente un segundo
-    después del arranque.
+    \item \textbf{Estado inicial} ($S$): Se asume \texttt{caudalMedido} $= 0.0$ y $\sigma = 1.0$, indicando que la primera medición ocurrirá exactamente un segundo después del arranque.
 \end{enumerate}
 \end{document}
