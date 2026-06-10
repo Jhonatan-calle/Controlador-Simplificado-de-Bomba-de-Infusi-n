@@ -142,4 +142,71 @@ reportando periódicamente el caudal real cada 1 segundo exacto.
 
     \item \textbf{Estado inicial} ($S$): Se asume \texttt{caudalMedido} $= 0.0$ y $\sigma = 1.0$, indicando que la primera medición ocurrirá exactamente un segundo después del arranque.
 \end{enumerate}
+
+\section{Actuador de la Bomba}
+
+El modelo \textbf{ActuadorBomba} representa la interfaz física de la bomba: recibe
+comandos lógicos del controlador y, tras una latencia de 0.5 segundos, actualiza
+el caudal real suministrado al paciente.
+
+\begin{figure}[H]
+\begin{cmldevs}
+\kw{atomic} ActuadorBomba \kw{is} <X, Y, S, \dint{}, \dext{}, \clambda{}, \cmlta{}> \kw{where}
+\kw{S is}
+    caudalFisico   : \cmlR{};       \cmlcomment{-- caudal que actualmente sale de la bomba}
+    caudalObjetivo : \cmlR{};       \cmlcomment{-- caudal a alcanzar tras la latencia}
+    \cmlsigma{}            : \cmlTime{};    \cmlcomment{-- controla la latencia de 0.5 segundos}
+\kw{end S}
+\kw{X is}
+    ajustarCaudal : \cmlR{};        \cmlcomment{-- nuevo valor de dosis desde el controlador}
+    detenerBomba  : \{signal\};     \cmlcomment{-- senal de parada de emergencia}
+\kw{end X}
+\kw{Y is}
+    caudalActual : \cmlR{};         \cmlcomment{-- notifica el cambio fisico al Sensor}
+\kw{end Y}
+\dext{}((caudalFisico, caudalObjetivo, \cmlsigma{}), e, (puerto, valor)) \kw{is}
+    \kw{defcases}
+        caudalObjetivo = valor;   \kw{if} (puerto = ajustarCaudal)
+        \cmlsigma{} = 0.5;
+        caudalObjetivo = 0.0;     \kw{if} (puerto = detenerBomba)
+        \cmlsigma{} = 0.5;
+    \kw{end defcases}
+\kw{end} \dext{}
+\dint{}(caudalFisico, caudalObjetivo, \cmlsigma{}) \kw{is}
+    \cmlcomment{-- Cumplida la latencia, el caudal fisico alcanza al objetivo}
+    caudalFisico = caudalObjetivo;
+    \cmlsigma{}          = infinity;
+\kw{end} \dint{}
+\clambda{}(caudalFisico, caudalObjetivo, \cmlsigma{}) \kw{is}
+    \cmlcomment{-- Emite el nuevo caudal real antes de pasar al estado pasivo}
+    caudalActual = caudalObjetivo;
+\kw{end} \clambda{}
+\cmlta{}(caudalFisico, caudalObjetivo, \cmlsigma{}) \kw{is}
+    \cmlsigma{};
+\kw{end} \cmlta{}
+\kw{end atomic}
+\end{cmldevs}
+\caption{Especificación CML-DEVS: Actuador de la Bomba}
+\label{fig:actuador-bomba}
+\end{figure}
+
+\subsection*{Análisis del modelo}
+
+\begin{enumerate}
+    \item \textbf{Manejo de la latencia} ($\delta_{\mathit{ext}}$ y $\mathit{ta}$): Al recibir
+    un evento externo, el modelo guarda el nuevo valor en \texttt{caudalObjetivo} y
+    establece $\sigma = 0.5$, obligando al sistema a esperar exactamente el tiempo
+    de latencia especificado antes de aplicar el cambio.
+
+    \item \textbf{Estado pasivo}: Cuando no hay órdenes pendientes, $\sigma = \infty$.
+    El actuador mantiene el caudal actual indefinidamente hasta que el controlador
+    envíe un nuevo evento.
+
+    \item \textbf{Sincronización con el sensor}: La salida \texttt{caudalActual} se
+    conecta en el modelo acoplado a la entrada del Sensor de Flujo, que reportará
+    el cambio medio segundo después de que el controlador emitió la orden.
+
+    \item \textbf{Tipos de datos}: Se utiliza $\mathbb{R}$ para los caudales
+    (0 a 200 ml/h) y \texttt{\{signal\}} para el evento discreto de detención.
+\end{enumerate}
 \end{document}
