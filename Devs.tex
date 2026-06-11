@@ -353,10 +353,14 @@ y coordina las acciones sobre el actuador y el módulo de alarmas.
             \kw{if} (puerto = ordenMedica \cmlwedge{} valor \cmlgt{} 0.0)
         caudalObjetivo = valor; fase = OCIOSO; \cmlsigma{} = 0.0;
             \kw{if} (puerto = ordenMedica \cmlwedge{} valor \cmleq{} 0.0)
-        caudalReal = valor; t\_desvio = 5.0; \cmlsigma{} = min(\cmlsigma{} - e, t\_desvio);
-            \kw{if} (puerto = sensorFlujo \cmlwedge{} abs(valor - caudalObjetivo) \cmlgt{} 0.1 * caudalObjetivo)
-        caudalReal = valor; t\_desvio = infinity; \cmlsigma{} = \cmlsigma{} - e;
-            \kw{if} (puerto = sensorFlujo \cmlwedge{} abs(valor - caudalObjetivo) \cmleq{} 0.1 * caudalObjetivo)
+        caudalReal = valor; t\_desvio = 5.0;
+        \cmlsigma{} = min(\cmlsigma{} - e, t\_desvio);
+            \kw{if} (puerto = sensorFlujo \cmlwedge{}
+                abs(valor - caudalObjetivo) \cmlgt{} 0.1 * caudalObjetivo)
+        caudalReal = valor; t\_desvio = infinity;
+        \cmlsigma{} = \cmlsigma{} - e;
+            \kw{if} (puerto = sensorFlujo \cmlwedge{}
+                abs(valor - caudalObjetivo) \cmlle{} 0.1 * caudalObjetivo)
         fase = ALERTA\_BOLSA; t\_bolsa = 60.0; \cmlsigma{} = 0.0;
             \kw{if} (puerto = finBolsa)
         fase = OCIOSO; \cmlsigma{} = 0.0;
@@ -382,9 +386,9 @@ y coordina las acciones sobre el actuador y el módulo de alarmas.
             \kw{if} (fase = ALERTA\_BOLSA)
         alarma = media;
             \kw{if} (fase = ALARMA\_MEDIA)
-        alarma = critica; detenerBomba = present;
+        alarma = critica; detenerBomba = signal;
             \kw{if} (fase = ALARMA\_CRITICA)
-        detenerBomba = present;
+        detenerBomba = signal;
             \kw{if} (fase = OCIOSO \cmlwedge{} caudalObjetivo = 0.0)
     \kw{end defcases}
     registrarEvento = "Evento de control ejecutado";
