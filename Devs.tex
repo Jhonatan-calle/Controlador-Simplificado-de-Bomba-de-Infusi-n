@@ -24,6 +24,13 @@
 }
 
 % Comandos de conveniencia para CML-DEVS
+\newcommand{\cmlgt}{$>$}
+\newcommand{\cmlle}{$\leq$}
+\newcommand{\cmleq}{$=$}
+\newcommand{\cmlplus}{$+$}
+\newcommand{\cmlN}{$\mathbb{N}$}
+\newcommand{\cmlgeq}{$\geq$}
+\newcommand{\cmllt}{$<$}
 \newcommand{\cmlwedge}{$\wedge$}
 \newcommand{\cmlneq}{$\neq$}
 \newcommand{\cmlvee}{$\vee$}
@@ -217,36 +224,42 @@ el caudal real suministrado al paciente.
 
 El modelo \textbf{ModuloAlarmas} gestiona las notificaciones hacia el personal médico,
 emitiendo alertas y manteniendo un ciclo de retransmisión para las alarmas críticas
-no confirmadas.
+no confirmadas. Además, escala automáticamente a alarma crítica al acumular tres
+alarmas medias consecutivas.
 
 \begin{center}
 \begin{cmldevs}
 \kw{atomic} ModuloAlarmas \kw{is} <X, Y, S, \dint{}, \dext{}, \clambda{}, \cmlta{}> \kw{where}
 \kw{S is}
-    tipoAlarma : \{BAJA, MEDIA, CRITICA, NINGUNA\};
-    fase       : \{OCIOSO, NOTIFICANDO, ESPERANDO\_CONF, REPETIENDO\};
-    \cmlsigma{}        : \cmlTime{};  \cmlcomment{-- control del tiempo de avance}
+    tipoAlarma    : \{BAJA, MEDIA, CRITICA, NINGUNA\};
+    fase          : \{OCIOSO, NOTIFICANDO, ESPERANDO\_CONF, REPETIENDO\};
+    contadorMedia : \cmlN{};  \cmlcomment{-- acumula alarmas medias recibidas}
+    \cmlsigma{}           : \cmlTime{};   \cmlcomment{-- control del tiempo de avance}
 \kw{end S}
 \kw{X is}
-    alarma               : \{baja, media, critica\};  \cmlcomment{-- niveles de alarma}
-    confirmacionEnfermero : \{signal\};               \cmlcomment{-- confirmacion manual}
+    alarma                : \{baja, media, critica\};  \cmlcomment{-- niveles de alarma}
+    confirmacionEnfermero : \{signal\};                \cmlcomment{-- confirmacion manual}
 \kw{end X}
 \kw{Y is}
     notificacionAlarma : \kw{Text};  \cmlcomment{-- mensaje hacia el entorno exterior}
 \kw{end Y}
-\dext{}((tipoAlarma, fase, \cmlsigma{}), e, (puerto, valor)) \kw{is}
+\dext{}((tipoAlarma, fase, contadorMedia, \cmlsigma{}), e, (puerto, valor)) \kw{is}
     \kw{defcases}
-        fase = NOTIFICANDO; \cmlsigma{} = 0.0;
-            \kw{if} (puerto = alarma \cmlwedge{} valor = critica) tipoAlarma = CRITICA;
-            \kw{if} (puerto = alarma \cmlwedge{} valor = media)   tipoAlarma = MEDIA;
-            \kw{if} (puerto = alarma \cmlwedge{} valor = baja)    tipoAlarma = BAJA;
-        tipoAlarma = NINGUNA; fase = OCIOSO; \cmlsigma{} = infinity;
+        tipoAlarma = CRITICA; fase = NOTIFICANDO; \cmlsigma{} = 0.0;
+            \kw{if} (puerto = alarma \cmlwedge{} valor = critica)
+        tipoAlarma = CRITICA; fase = NOTIFICANDO; contadorMedia = 0; \cmlsigma{} = 0.0;
+            \kw{if} (puerto \cmleq{} alarma \cmlwedge{} valor \cmleq{} media \cmlwedge{} contadorMedia \cmlplus{} 1 \cmlgeq{} 3)
+        tipoAlarma = MEDIA; fase = NOTIFICANDO; contadorMedia = contadorMedia + 1; \cmlsigma{} = 0.0;
+            \kw{if} (puerto \cmleq{} alarma \cmlwedge{} valor \cmleq{} media \cmlwedge{} contadorMedia \cmlplus{} 1 \cmllt{} 3)
+        tipoAlarma = BAJA; fase = NOTIFICANDO; \cmlsigma{} = 0.0;
+            \kw{if} (puerto = alarma \cmlwedge{} valor = baja)
+        tipoAlarma = NINGUNA; fase = OCIOSO; contadorMedia = 0; \cmlsigma{} = infinity;
             \kw{if} (puerto = confirmacionEnfermero \cmlwedge{} tipoAlarma = CRITICA)
         \cmlsigma{} = \cmlsigma{} - e;  \cmlcomment{-- ignorar si no hay alarma critica activa}
             \kw{if} (puerto = confirmacionEnfermero \cmlwedge{} tipoAlarma \cmlneq{} CRITICA)
     \kw{end defcases}
 \kw{end} \dext{}
-\dint{}(tipoAlarma, fase, \cmlsigma{}) \kw{is}
+\dint{}(tipoAlarma, fase, contadorMedia, \cmlsigma{}) \kw{is}
     \kw{defcases}
         fase = ESPERANDO\_CONF; \cmlsigma{} = 30.0;
             \kw{if} (tipoAlarma = CRITICA \cmlwedge{} fase = NOTIFICANDO)
@@ -258,11 +271,11 @@ no confirmadas.
             \kw{if} (tipoAlarma = MEDIA \cmlvee{} tipoAlarma = BAJA)
     \kw{end defcases}
 \kw{end} \dint{}
-\clambda{}(tipoAlarma, fase, \cmlsigma{}) \kw{is}
+\clambda{}(tipoAlarma, fase, contadorMedia, \cmlsigma{}) \kw{is}
     notificacionAlarma = "ALERTA: " + tipoAlarma;
         \kw{if} (fase = NOTIFICANDO \cmlvee{} fase = REPETIENDO)
 \kw{end} \clambda{}
-\cmlta{}(tipoAlarma, fase, \cmlsigma{}) \kw{is}
+\cmlta{}(tipoAlarma, fase, contadorMedia, \cmlsigma{}) \kw{is}
     \cmlsigma{};
 \kw{end} \cmlta{}
 \kw{end atomic}
@@ -279,10 +292,15 @@ no confirmadas.
     unifican los tres niveles de alerta, y \texttt{confirmacionEnfermero}, de tipo
     \texttt{signal}, para el reconocimiento manual del personal médico.
 
+    \item \textbf{Escalado automático a crítica}: El estado \texttt{contadorMedia}
+    acumula las alarmas medias recibidas. Al alcanzar 3, la $\delta_{\mathit{ext}}$
+    escala directamente a \texttt{tipoAlarma = CRITICA} y resetea el contador a 0,
+    sin requerir intervención externa.
+
     \item \textbf{Estados transitorios} ($ta = 0$): Al recibir cualquier valor en
     el puerto \texttt{alarma}, la $\delta_{\mathit{ext}}$ establece
     \texttt{fase = NOTIFICANDO} y $\sigma = 0$, forzando la ejecución inmediata
-    de $\lambda$ seguida de $\delta_{\mathit{int}}$ para emitir el aviso sin demora.
+    de $\lambda$ seguida de $\delta_{\mathit{int}}$.
 
     \item \textbf{Lógica de repetición para alarma crítica}: Luego de la primera
     notificación, $\delta_{\mathit{int}}$ transiciona a \texttt{ESPERANDO\_CONF}
@@ -296,8 +314,88 @@ no confirmadas.
 
     \item \textbf{Gestión de confirmación}: Si llega \texttt{confirmacionEnfermero}
     con \texttt{tipoAlarma = CRITICA}, la $\delta_{\mathit{ext}}$ limpia el estado
-    y establece $\sigma = \infty$, deteniendo cualquier ciclo de repetición activo.
+    y resetea \texttt{contadorMedia} a 0, deteniendo cualquier ciclo de repetición.
     Si no hay alarma crítica activa, la confirmación se ignora manteniendo el
     cronograma con $\sigma = \sigma - e$.
 \end{enumerate}
+\section{Controlador de Bomba}
+
+El modelo \textbf{ControladorBomba} es el componente central del sistema. Recibe
+órdenes médicas, monitorea el caudal real, detecta desvíos y condiciones de riesgo,
+y coordina las acciones sobre el actuador y el módulo de alarmas.
+
+\begin{center}
+\begin{cmldevs}
+\kw{atomic} ControladorBomba \kw{is} <X, Y, S, \dint{}, \dext{}, \clambda{}, \cmlta{}> \kw{where}
+\kw{S is}
+    caudalObjetivo : \cmlR{};  \cmlcomment{-- dosis indicada por ordenMedica (0-200 ml/h)}
+    caudalReal     : \cmlR{};  \cmlcomment{-- ultima medicion del sensor de flujo}
+    fase : \{OCIOSO, INFUNDIENDO, ALERTA\_BOLSA, ALARMA\_MEDIA, ALARMA\_CRITICA\};
+    \cmlsigma{}            : \cmlTime{};  \cmlcomment{-- tiempo para la proxima transicion interna}
+    t\_desvio      : \cmlTime{};  \cmlcomment{-- temporizador de desvio >10\% (limite 5s)}
+    t\_bolsa       : \cmlTime{};  \cmlcomment{-- temporizador tras fin de bolsa (limite 60s)}
+\kw{end S}
+\kw{X is}
+    ordenMedica           : \cmlR{};      \cmlcomment{-- caudal objetivo}
+    sensorFlujo           : \cmlR{};      \cmlcomment{-- caudal real medido}
+    finBolsa              : \{signal\};   \cmlcomment{-- bolsa casi vacia}
+    confirmacionEnfermero : \{signal\};   \cmlcomment{-- acuse de recibo de alarmas}
+\kw{end X}
+\kw{Y is}
+    ajustarCaudal  : \cmlR{};      \cmlcomment{-- comando al actuador}
+    detenerBomba   : \{signal\};   \cmlcomment{-- parada de emergencia al actuador}
+    alarma         : \{baja, media, critica\};  \cmlcomment{-- alertas al ModuloAlarmas}
+    registrarEvento : \kw{Text};   \cmlcomment{-- registro de auditoria}
+\kw{end Y}
+\dext{}((caudalObjetivo, caudalReal, fase, \cmlsigma{}, t\_desvio, t\_bolsa), e, (puerto, valor)) \kw{is}
+    \kw{defcases}
+        caudalObjetivo = valor; fase = INFUNDIENDO; \cmlsigma{} = 2.0;
+            \kw{if} (puerto = ordenMedica \cmlwedge{} valor \cmlgt{} 0.0)
+        caudalObjetivo = valor; fase = OCIOSO; \cmlsigma{} = 0.0;
+            \kw{if} (puerto = ordenMedica \cmlwedge{} valor \cmleq{} 0.0)
+        caudalReal = valor; t\_desvio = 5.0; \cmlsigma{} = min(\cmlsigma{} - e, t\_desvio);
+            \kw{if} (puerto = sensorFlujo \cmlwedge{} abs(valor - caudalObjetivo) \cmlgt{} 0.1 * caudalObjetivo)
+        caudalReal = valor; t\_desvio = infinity; \cmlsigma{} = \cmlsigma{} - e;
+            \kw{if} (puerto = sensorFlujo \cmlwedge{} abs(valor - caudalObjetivo) \cmleq{} 0.1 * caudalObjetivo)
+        fase = ALERTA\_BOLSA; t\_bolsa = 60.0; \cmlsigma{} = 0.0;
+            \kw{if} (puerto = finBolsa)
+        fase = OCIOSO; \cmlsigma{} = 0.0;
+            \kw{if} (puerto = confirmacionEnfermero \cmlwedge{} fase = ALARMA\_CRITICA)
+    \kw{end defcases}
+\kw{end} \dext{}
+\dint{}(caudalObjetivo, caudalReal, fase, \cmlsigma{}, t\_desvio, t\_bolsa) \kw{is}
+    \kw{defcases}
+        fase = ALARMA\_MEDIA; t\_desvio = infinity; \cmlsigma{} = 0.0;
+            \kw{if} (\cmlsigma{} = t\_desvio)
+        fase = OCIOSO; t\_bolsa = infinity; \cmlsigma{} = 0.0;
+            \kw{if} (\cmlsigma{} = t\_bolsa)
+        \cmlsigma{} = infinity;
+            \kw{if} (fase = INFUNDIENDO)
+        \cmlsigma{} = infinity;
+    \kw{end defcases}
+\kw{end} \dint{}
+\clambda{}(caudalObjetivo, caudalReal, fase, \cmlsigma{}, t\_desvio, t\_bolsa) \kw{is}
+    \kw{defcases}
+        ajustarCaudal = caudalObjetivo;
+            \kw{if} (fase = INFUNDIENDO)
+        alarma = baja;
+            \kw{if} (fase = ALERTA\_BOLSA)
+        alarma = media;
+            \kw{if} (fase = ALARMA\_MEDIA)
+        alarma = critica; detenerBomba = present;
+            \kw{if} (fase = ALARMA\_CRITICA)
+        detenerBomba = present;
+            \kw{if} (fase = OCIOSO \cmlwedge{} caudalObjetivo = 0.0)
+    \kw{end defcases}
+    registrarEvento = "Evento de control ejecutado";
+\kw{end} \clambda{}
+\cmlta{}(caudalObjetivo, caudalReal, fase, \cmlsigma{}, t\_desvio, t\_bolsa) \kw{is}
+    \cmlsigma{};
+\kw{end} \cmlta{}
+\kw{end atomic}
+\end{cmldevs}
+\captionof{figure}{Especificación CML-DEVS: Controlador de Bomba}
+\label{fig:controlador-bomba}
+\end{center}
 \end{document}
+
