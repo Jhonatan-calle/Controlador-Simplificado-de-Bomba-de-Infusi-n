@@ -347,7 +347,8 @@ y coordina las acciones sobre el actuador y el módulo de alarmas.
     alarma         : \{baja, media, critica\};  \cmlcomment{-- alertas al ModuloAlarmas}
     registrarEvento : \kw{Text};   \cmlcomment{-- registro de auditoria}
 \kw{end Y}
-\dext{}((caudalObjetivo, caudalReal, fase, \cmlsigma{}, t\_desvio, t\_bolsa), e, (puerto, valor)) \kw{is}
+\dext{}((caudalObjetivo, caudalReal, fase,
+         \cmlsigma{}, t\_desvio, t\_bolsa), e, (puerto, valor)) \kw{is}
     \kw{defcases}
         caudalObjetivo = valor; fase = INFUNDIENDO; \cmlsigma{} = 2.0;
             \kw{if} (puerto = ordenMedica \cmlwedge{} valor \cmlgt{} 0.0)
