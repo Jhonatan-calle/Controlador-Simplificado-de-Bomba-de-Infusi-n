@@ -113,29 +113,38 @@ o estocástica según los escenarios definidos.
 
 \section{Sensor de Flujo}
 
-El modelo \textbf{SensorFlujo} actúa como puente entre el actuador y el controlador,
-reportando periódicamente el caudal real cada 1 segundo exacto.
+El modelo \textbf{SensorFlujo} reporta periódicamente el caudal real cada 1 segundo.
+Cuando recibe una actualización del actuador, incorpora ese valor para que la próxima
+medición refleje el estado físico real de la bomba.
 
 \begin{figure}[H]
 \begin{cmldevs}
-\kw{atomic} SensorFlujo \kw{is} <Y, S, \dint{}, \clambda{}, \cmlta{}> \kw{where}
+\kw{atomic} SensorFlujo \kw{is} <X, Y, S, \dint{}, \dext{}, \clambda{}, \cmlta{}> \kw{where}
 \kw{S is}
-    caudalMedido : \cmlR{};  \cmlcomment{-- valor de caudal generado internamente}
-    \cmlsigma{}          : \cmlTime{}; \cmlcomment{-- controla el periodo de muestreo (1 s)}
+    caudalMedido  : \cmlR{};  \cmlcomment{-- valor de caudal a reportar}
+    caudalActuador : \cmlR{};  \cmlcomment{-- ultimo valor recibido del actuador}
+    \cmlsigma{}           : \cmlTime{}; \cmlcomment{-- controla el periodo de muestreo (1 s)}
 \kw{end S}
+\kw{X is}
+    caudalActual : \cmlR{};  \cmlcomment{-- caudal fisico recibido del actuador}
+\kw{end X}
 \kw{Y is}
     sensorFlujo  : \cmlR{};  \cmlcomment{-- medicion enviada al Controlador}
 \kw{end Y}
-\dint{}(caudalMedido, \cmlsigma{}) \kw{is}
-    \cmlcomment{-- Genera el siguiente valor de caudal y reinicia el temporizador}
-    caudalMedido = next\_caudal\_logic();
+\dext{}((caudalMedido, caudalActuador, \cmlsigma{}), e, (puerto, valor)) \kw{is}
+    caudalActuador = valor;
+    \cmlsigma{} = \cmlsigma{} - e;
+        \kw{if} (puerto = caudalActual)
+\kw{end} \dext{}
+\dint{}(caudalMedido, caudalActuador, \cmlsigma{}) \kw{is}
+    \cmlcomment{-- Si hay valor del actuador lo usa, sino genera internamente}
+    caudalMedido = next\_caudal\_logic(caudalActuador);
     \cmlsigma{}          = 1.0;
 \kw{end} \dint{}
-\clambda{}(caudalMedido, \cmlsigma{}) \kw{is}
-    \cmlcomment{-- Emite el valor medido antes de la transicion interna}
+\clambda{}(caudalMedido, caudalActuador, \cmlsigma{}) \kw{is}
     sensorFlujo = caudalMedido;
 \kw{end} \clambda{}
-\cmlta{}(caudalMedido, \cmlsigma{}) \kw{is}
+\cmlta{}(caudalMedido, caudalActuador, \cmlsigma{}) \kw{is}
     \cmlsigma{};
 \kw{end} \cmlta{}
 \kw{end atomic}
@@ -143,6 +152,24 @@ reportando periódicamente el caudal real cada 1 segundo exacto.
 \caption{Especificación CML-DEVS: Sensor de Flujo}
 \label{fig:sensor-flujo}
 \end{figure}
+
+\subsection*{Análisis del modelo}
+
+\begin{enumerate}
+    \item \textbf{Frecuencia de muestreo} ($\mathit{ta}$ y $\delta_{\mathit{int}}$):
+    El sensor reporta el caudal cada 1 segundo. $\sigma$ se resetea en \texttt{1.0}
+    en cada transición interna.
+
+    \item \textbf{Incorporación del valor del actuador} ($\delta_{\mathit{ext}}$):
+    Al recibir \texttt{caudalActual} desde el actuador, el modelo almacena el valor
+    en \texttt{caudalActuador} y mantiene el cronograma con $\sigma = \sigma - e$.
+    En la próxima transición interna, \texttt{next\_caudal\_logic(caudalActuador)}
+    utiliza ese valor para generar la medición.
+
+    \item \textbf{Estado inicial} ($S$): Se asume \texttt{caudalMedido} $= 0.0$,
+    \texttt{caudalActuador} $= 0.0$ y $\sigma = 1.0$.
+\end{enumerate}
+```
 
 \subsection*{Análisis del modelo}
 
@@ -320,7 +347,7 @@ intervención externa adicional.
 
     \item \textbf{Alarmas no críticas}: Los valores \texttt{media} y \texttt{baja} se notifican una única vez; luego $\delta_{\mathit{int}}$ resetea el estado a \texttt{OCIOSO} con $\sigma = \infty$.
 
-    \item \textbf{Gestión de confirmación}: Si llega \texttt{confirmacionEnfermero}
+    \item \textbf{Gestión de confirmación}: Si llega \texttt{confirmacionEnfermero} 
       con \texttt{tipoAlarma = CRITICA}, la $\delta_{\mathit{ext}}$ limpia el 
       estado y resetea \texttt{contadorMedia} a 0, deteniendo cualquier ciclo de 
       repetición. Si no hay alarma crítica activa, la confirmación se ignora 
