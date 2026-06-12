@@ -169,17 +169,6 @@ medición refleje el estado físico real de la bomba.
     \item \textbf{Estado inicial} ($S$): Se asume \texttt{caudalMedido} $= 0.0$,
     \texttt{caudalActuador} $= 0.0$ y $\sigma = 1.0$.
 \end{enumerate}
-```
-
-\subsection*{Análisis del modelo}
-
-\begin{enumerate}
-    \item \textbf{Frecuencia de muestreo} ($\mathit{ta}$ y $\delta_{\mathit{int}}$): El requisito establece que el sensor debe informar el caudal real cada 1 segundo. Por ello, $\sigma$ se inicializa y resetea en \texttt{1.0} en cada transición interna.
-
-    \item \textbf{Puertos} ($Y$): Se define el puerto de tipo $\mathbb{R}$ para la  comunicación modular dentro del modelo acoplado.
-
-    \item \textbf{Estado inicial} ($S$): Se asume \texttt{caudalMedido} $= 0.0$ y $\sigma = 1.0$, indicando que la primera medición ocurrirá exactamente un segundo después del arranque.
-\end{enumerate}
 
 \section{Actuador de la Bomba}
 
