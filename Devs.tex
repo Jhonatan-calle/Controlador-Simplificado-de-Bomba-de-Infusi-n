@@ -9,7 +9,7 @@
 \usepackage{booktabs}
 \usepackage{hyperref}
 \usepackage{float}
-\usepackage{caption}
+\usepackage[hypcap=false]{caption}
 
 % Para los bloques CML-DEVS usamos alltt, que permite
 % mezclar texto normal con comandos LaTeX libremente.
@@ -224,9 +224,16 @@ el caudal real suministrado al paciente.
 
 El modelo \textbf{ModuloAlarmas} gestiona las notificaciones hacia el personal médico,
 emitiendo alertas y manteniendo un ciclo de retransmisión para las alarmas críticas
-no confirmadas. Además, escala automáticamente a alarma crítica al acumular tres
-alarmas medias consecutivas.
+no confirmadas.
 
+La consigna establece que el criterio exacto para escalar de \texttt{alarmaMedia} a
+\texttt{alarmaCritica} debe ser definido por cada grupo. En este trabajo se optó por
+incorporar un contador de alarmas medias (\texttt{contadorMedia}) en el estado del
+modelo. Cuando el controlador emite tres alarmas medias consecutivas sin que el
+desvío de caudal sea corregido, el módulo interpreta que el sistema no ha logrado
+estabilizarse y escala automáticamente a \texttt{alarmaCritica}, reseteando el
+contador. Este criterio permite una escalada objetiva y trazable sin requerir
+intervención externa adicional.
 \begin{center}
 \begin{cmldevs}
 \kw{atomic} ModuloAlarmas \kw{is} <X, Y, S, \dint{}, \dext{}, \clambda{}, \cmlta{}> \kw{where}
@@ -247,13 +254,16 @@ alarmas medias consecutivas.
     \kw{defcases}
         tipoAlarma = CRITICA; fase = NOTIFICANDO; \cmlsigma{} = 0.0;
             \kw{if} (puerto = alarma \cmlwedge{} valor = critica)
-        tipoAlarma = CRITICA; fase = NOTIFICANDO; contadorMedia = 0; \cmlsigma{} = 0.0;
+        tipoAlarma = CRITICA; fase = NOTIFICANDO;
+        contadorMedia = 0; \cmlsigma{} = 0.0;
             \kw{if} (puerto \cmleq{} alarma \cmlwedge{} valor \cmleq{} media \cmlwedge{} contadorMedia \cmlplus{} 1 \cmlgeq{} 3)
-        tipoAlarma = MEDIA; fase = NOTIFICANDO; contadorMedia = contadorMedia + 1; \cmlsigma{} = 0.0;
+        tipoAlarma = MEDIA; fase = NOTIFICANDO; 
+        contadorMedia = contadorMedia + 1; \cmlsigma{} = 0.0;
             \kw{if} (puerto \cmleq{} alarma \cmlwedge{} valor \cmleq{} media \cmlwedge{} contadorMedia \cmlplus{} 1 \cmllt{} 3)
         tipoAlarma = BAJA; fase = NOTIFICANDO; \cmlsigma{} = 0.0;
             \kw{if} (puerto = alarma \cmlwedge{} valor = baja)
-        tipoAlarma = NINGUNA; fase = OCIOSO; contadorMedia = 0; \cmlsigma{} = infinity;
+        tipoAlarma = NINGUNA; fase = OCIOSO; 
+        contadorMedia = 0; \cmlsigma{} = infinity;
             \kw{if} (puerto = confirmacionEnfermero \cmlwedge{} tipoAlarma = CRITICA)
         \cmlsigma{} = \cmlsigma{} - e;  \cmlcomment{-- ignorar si no hay alarma critica activa}
             \kw{if} (puerto = confirmacionEnfermero \cmlwedge{} tipoAlarma \cmlneq{} CRITICA)
@@ -308,15 +318,14 @@ alarmas medias consecutivas.
     \texttt{REPETIENDO} con ciclos de $\sigma = 10$ segundos, cumpliendo los
     requisitos temporales 6 y 7 del proyecto.
 
-    \item \textbf{Alarmas no críticas}: Los valores \texttt{media} y \texttt{baja}
-    se notifican una única vez; luego $\delta_{\mathit{int}}$ resetea el estado a
-    \texttt{OCIOSO} con $\sigma = \infty$.
+    \item \textbf{Alarmas no críticas}: Los valores \texttt{media} y \texttt{baja} se notifican una única vez; luego $\delta_{\mathit{int}}$ resetea el estado a \texttt{OCIOSO} con $\sigma = \infty$.
 
     \item \textbf{Gestión de confirmación}: Si llega \texttt{confirmacionEnfermero}
-    con \texttt{tipoAlarma = CRITICA}, la $\delta_{\mathit{ext}}$ limpia el estado
-    y resetea \texttt{contadorMedia} a 0, deteniendo cualquier ciclo de repetición.
-    Si no hay alarma crítica activa, la confirmación se ignora manteniendo el
-    cronograma con $\sigma = \sigma - e$.
+      con \texttt{tipoAlarma = CRITICA}, la $\delta_{\mathit{ext}}$ limpia el 
+      estado y resetea \texttt{contadorMedia} a 0, deteniendo cualquier ciclo de 
+      repetición. Si no hay alarma crítica activa, la confirmación se ignora 
+      manteniendo elronograma con $\sigma = \sigma - e$.
+
 \end{enumerate}
 \section{Controlador de Bomba}
 
@@ -401,6 +410,66 @@ y coordina las acciones sobre el actuador y el módulo de alarmas.
 \end{cmldevs}
 \captionof{figure}{Especificación CML-DEVS: Controlador de Bomba}
 \label{fig:controlador-bomba}
+\end{center}
+\section{Generador de Confirmación de Enfermero}
+
+El modelo \textbf{GeneradorConfirmacion} es un modelo atómico autónomo que genera
+periódicamente eventos \texttt{confirmacionEnfermero}, simulando el reconocimiento
+manual de alarmas por parte del personal médico.
+
+\begin{center}
+\begin{cmldevs}
+\kw{atomic} GeneradorConfirmacion \kw{is} <Y, S, \dint{}, \clambda{}, \cmlta{}> \kw{where}
+\kw{S is}
+    \cmlsigma{} : \cmlTime{};  \cmlcomment{-- tiempo hasta la siguiente confirmacion}
+\kw{end S}
+\kw{Y is}
+    confirmacionEnfermero : \{signal\};  \cmlcomment{-- evento de confirmacion}
+\kw{end Y}
+\dint{}(\cmlsigma{}) \kw{is}
+    \cmlcomment{-- A definir en la implementacion: intervalo entre confirmaciones}
+    \cmlsigma{} = next\_confirmation\_time();
+\kw{end} \dint{}
+\clambda{}(\cmlsigma{}) \kw{is}
+    confirmacionEnfermero = signal;
+\kw{end} \clambda{}
+\cmlta{}(\cmlsigma{}) \kw{is}
+    \cmlsigma{};
+\kw{end} \cmlta{}
+\kw{end atomic}
+\end{cmldevs}
+\captionof{figure}{Especificación CML-DEVS: Generador de Confirmación de Enfermero}
+\label{fig:generador-confirmacion}
+\end{center}
+\section{Generador de Fin de Bolsa}
+
+El modelo \textbf{GeneradorFinBolsa} es un modelo atómico autónomo que genera
+el evento \texttt{finBolsa} cuando la bolsa de medicación está próxima a agotarse.
+El momento del evento se determina en la implementación en base al volumen inicial.
+
+\begin{center}
+\begin{cmldevs}
+\kw{atomic} GeneradorFinBolsa \kw{is} <Y, S, \dint{}, \clambda{}, \cmlta{}> \kw{where}
+\kw{S is}
+    \cmlsigma{} : \cmlTime{};  \cmlcomment{-- tiempo hasta el proximo fin de bolsa}
+\kw{end S}
+\kw{Y is}
+    finBolsa : \{signal\};
+\kw{end Y}
+\dint{}(\cmlsigma{}) \kw{is}
+    \cmlcomment{-- A definir en la implementacion: basado en volumen inicial}
+    \cmlsigma{} = next\_finBolsa\_logic();
+\kw{end} \dint{}
+\clambda{}(\cmlsigma{}) \kw{is}
+    finBolsa = signal;
+\kw{end} \clambda{}
+\cmlta{}(\cmlsigma{}) \kw{is}
+    \cmlsigma{};
+\kw{end} \cmlta{}
+\kw{end atomic}
+\end{cmldevs}
+\captionof{figure}{Especificación CML-DEVS: Generador de Fin de Bolsa}
+\label{fig:generador-fin-bolsa}
 \end{center}
 \end{document}
 
