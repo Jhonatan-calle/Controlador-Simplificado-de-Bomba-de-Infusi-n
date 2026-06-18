@@ -3,7 +3,6 @@ Devs.aux
 Devs.fdb_latexmk
 Devs.log
 Devs.out
-Devs.pdf
 Devs.synctex.gz
 venv/
 *.pyc
