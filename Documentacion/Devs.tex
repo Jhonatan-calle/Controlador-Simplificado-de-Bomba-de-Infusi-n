@@ -1,0 +1,517 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage[hypcap=false]{caption}
+
+% Para los bloques CML-DEVS usamos alltt, que permite
+% mezclar texto normal con comandos LaTeX libremente.
+\usepackage{alltt}
+\usepackage{xcolor}
+
+\geometry{
+    top=2.5cm,
+    bottom=2.5cm,
+    left=3cm,
+    right=3cm
+}
+
+% Comandos de conveniencia para CML-DEVS
+\newcommand{\cmlgt}{$>$}
+\newcommand{\cmlle}{$\leq$}
+\newcommand{\cmleq}{$=$}
+\newcommand{\cmlplus}{$+$}
+\newcommand{\cmlN}{$\mathbb{N}$}
+\newcommand{\cmlgeq}{$\geq$}
+\newcommand{\cmllt}{$<$}
+\newcommand{\cmlwedge}{$\wedge$}
+\newcommand{\cmlneq}{$\neq$}
+\newcommand{\cmlvee}{$\vee$}
+\newcommand{\kw}[1]{\textbf{#1}}          % palabras clave en negrita
+\newcommand{\cmlR}{$\mathbb{R}$}
+\newcommand{\cmlTime}{\textbf{Time}}
+\newcommand{\cmlsigma}{$\sigma$}
+\newcommand{\dint}{$\delta_{\mathit{int}}$}
+\newcommand{\dext}{$\delta_{\mathit{ext}}$}
+\newcommand{\clambda}{$\lambda$}
+\newcommand{\cmlta}{\textbf{ta}}
+\newcommand{\cmlcomment}[1]{\textit{\textcolor{gray}{#1}}}
+
+% Entorno para bloques CML-DEVS (imita el estilo de la tesis Hollmann)
+\newenvironment{cmldevs}{%
+  \begin{alltt}\small%
+}{%
+  \end{alltt}%
+}
+
+% ----------------------------------------------------------------
+
+\title{
+    \large Simulación de Sistemas \\[0.5em]
+    \LARGE \textbf{Proyecto de Simulación} \\[0.3em]
+    \large Sistema de Tiempo Real: Controlador Simplificado de Bomba de Infusión \\[1em]
+    \normalsize Especificación DEVS de los Modelos Atómicos
+}
+
+\author{
+    Jhonatan Calle Galeano \and Hernan Jara
+}
+
+\date{}
+
+% ================================================================
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+% ----------------------------------------------------------------
+\section{Generador de Órdenes Médicas}
+
+El modelo \textbf{GeneradorOrdenes} es un modelo atómico autónomo (sin entradas)
+que genera periódicamente eventos \texttt{ordenMedica}, indicando el caudal objetivo
+que debe administrar la bomba. Las órdenes pueden generarse de manera determinística
+o estocástica según los escenarios definidos.
+
+\begin{figure}[H]
+\begin{cmldevs}
+\kw{atomic} GeneradorOrdenes \kw{is} <Y, S, \dint{}, \clambda{}, \cmlta{}> \kw{where}
+\kw{S is}
+    caudalProximo : \cmlR{};    \cmlcomment{-- caudal objetivo (0 a 200 ml/h)}
+    interarribo   : \cmlTime{};  \cmlcomment{-- tiempo hasta la siguiente orden}
+    \cmlsigma{}             : \cmlTime{};  \cmlcomment{-- variable de avance de tiempo}
+\kw{end S}
+\kw{Y is}
+    ordenMedica : \cmlR{};      \cmlcomment{-- puerto de salida: valor del caudal}
+\kw{end Y}
+\dint{}(caudalProximo, interarribo, \cmlsigma{}) \kw{is}
+    \cmlcomment{-- A definir en la implementacion: puede ser deterministica}
+    \cmlcomment{-- (valores fijos) o estocastica (usando distribuciones)}
+    caudalProximo = next\_caudal\_logic();
+    interarribo   = next\_time\_logic();
+    \cmlsigma{}   = interarribo;
+\kw{end} \dint{}
+\clambda{}(caudalProximo, interarribo, \cmlsigma{}) \kw{is}
+    \cmlcomment{-- Emite el caudal objetivo por el puerto de salida}
+    ordenMedica = caudalProximo;
+\kw{end} \clambda{}
+\cmlta{}(caudalProximo, interarribo, \cmlsigma{}) \kw{is}
+    \cmlsigma{};
+\kw{end} \cmlta{}
+\kw{end atomic}
+\end{cmldevs}
+\caption{Especificación CML-DEVS: Generador de Órdenes Médicas}
+\label{fig:generador-ordenes}
+\end{figure}
+
+
+\section{Sensor de Flujo}
+
+El modelo \textbf{SensorFlujo} reporta periódicamente el caudal real cada 1 segundo.
+Cuando recibe una actualización del actuador, incorpora ese valor para que la próxima
+medición refleje el estado físico real de la bomba.
+
+\begin{figure}[H]
+\begin{cmldevs}
+\kw{atomic} SensorFlujo \kw{is} <X, Y, S, \dint{}, \dext{}, \clambda{}, \cmlta{}> \kw{where}
+\kw{S is}
+    caudalMedido  : \cmlR{};  \cmlcomment{-- valor de caudal a reportar}
+    caudalActuador : \cmlR{};  \cmlcomment{-- ultimo valor recibido del actuador}
+    \cmlsigma{}           : \cmlTime{}; \cmlcomment{-- controla el periodo de muestreo (1 s)}
+\kw{end S}
+\kw{X is}
+    caudalActual : \cmlR{};  \cmlcomment{-- caudal fisico recibido del actuador}
+\kw{end X}
+\kw{Y is}
+    sensorFlujo  : \cmlR{};  \cmlcomment{-- medicion enviada al Controlador}
+\kw{end Y}
+\dext{}((caudalMedido, caudalActuador, \cmlsigma{}), e, (puerto, valor)) \kw{is}
+    caudalActuador = valor;
+    \cmlsigma{} = \cmlsigma{} - e;
+        \kw{if} (puerto = caudalActual)
+\kw{end} \dext{}
+\dint{}(caudalMedido, caudalActuador, \cmlsigma{}) \kw{is}
+    \cmlcomment{-- Si hay valor del actuador lo usa, sino genera internamente}
+    caudalMedido = next\_caudal\_logic(caudalActuador);
+    \cmlsigma{}          = 1.0;
+\kw{end} \dint{}
+\clambda{}(caudalMedido, caudalActuador, \cmlsigma{}) \kw{is}
+    sensorFlujo = caudalMedido;
+\kw{end} \clambda{}
+\cmlta{}(caudalMedido, caudalActuador, \cmlsigma{}) \kw{is}
+    \cmlsigma{};
+\kw{end} \cmlta{}
+\kw{end atomic}
+\end{cmldevs}
+\caption{Especificación CML-DEVS: Sensor de Flujo}
+\label{fig:sensor-flujo}
+\end{figure}
+
+\subsection*{Análisis del modelo}
+
+\begin{enumerate}
+    \item \textbf{Frecuencia de muestreo} ($\mathit{ta}$ y $\delta_{\mathit{int}}$):
+    El sensor reporta el caudal cada 1 segundo. $\sigma$ se resetea en \texttt{1.0}
+    en cada transición interna.
+
+    \item \textbf{Incorporación del valor del actuador} ($\delta_{\mathit{ext}}$):
+    Al recibir \texttt{caudalActual} desde el actuador, el modelo almacena el valor
+    en \texttt{caudalActuador} y mantiene el cronograma con $\sigma = \sigma - e$.
+    En la próxima transición interna, \texttt{next\_caudal\_logic(caudalActuador)}
+    utiliza ese valor para generar la medición.
+
+    \item \textbf{Estado inicial} ($S$): Se asume \texttt{caudalMedido} $= 0.0$,
+    \texttt{caudalActuador} $= 0.0$ y $\sigma = 1.0$.
+\end{enumerate}
+
+\section{Actuador de la Bomba}
+
+El modelo \textbf{ActuadorBomba} representa la interfaz física de la bomba: recibe
+comandos lógicos del controlador y, tras una latencia de 0.5 segundos, actualiza
+el caudal real suministrado al paciente.
+
+\begin{figure}[H]
+\begin{cmldevs}
+\kw{atomic} ActuadorBomba \kw{is} <X, Y, S, \dint{}, \dext{}, \clambda{}, \cmlta{}> \kw{where}
+\kw{S is}
+    caudalFisico   : \cmlR{};       \cmlcomment{-- caudal que actualmente sale de la bomba}
+    caudalObjetivo : \cmlR{};       \cmlcomment{-- caudal a alcanzar tras la latencia}
+    \cmlsigma{}            : \cmlTime{};    \cmlcomment{-- controla la latencia de 0.5 segundos}
+\kw{end S}
+\kw{X is}
+    ajustarCaudal : \cmlR{};        \cmlcomment{-- nuevo valor de dosis desde el controlador}
+    detenerBomba  : \{signal\};     \cmlcomment{-- senal de parada de emergencia}
+\kw{end X}
+\kw{Y is}
+    caudalActual : \cmlR{};         \cmlcomment{-- notifica el cambio fisico al Sensor}
+\kw{end Y}
+\dext{}((caudalFisico, caudalObjetivo, \cmlsigma{}), e, (puerto, valor)) \kw{is}
+    \kw{defcases}
+        caudalObjetivo = valor;   \kw{if} (puerto = ajustarCaudal)
+        \cmlsigma{} = 0.5;
+        caudalObjetivo = 0.0;     \kw{if} (puerto = detenerBomba)
+        \cmlsigma{} = 0.5;
+    \kw{end defcases}
+\kw{end} \dext{}
+\dint{}(caudalFisico, caudalObjetivo, \cmlsigma{}) \kw{is}
+    \cmlcomment{-- Cumplida la latencia, el caudal fisico alcanza al objetivo}
+    caudalFisico = caudalObjetivo;
+    \cmlsigma{}          = infinity;
+\kw{end} \dint{}
+\clambda{}(caudalFisico, caudalObjetivo, \cmlsigma{}) \kw{is}
+    \cmlcomment{-- Emite el nuevo caudal real antes de pasar al estado pasivo}
+    caudalActual = caudalObjetivo;
+\kw{end} \clambda{}
+\cmlta{}(caudalFisico, caudalObjetivo, \cmlsigma{}) \kw{is}
+    \cmlsigma{};
+\kw{end} \cmlta{}
+\kw{end atomic}
+\end{cmldevs}
+\caption{Especificación CML-DEVS: Actuador de la Bomba}
+\label{fig:actuador-bomba}
+\end{figure}
+
+\subsection*{Análisis del modelo}
+
+\begin{enumerate}
+    \item \textbf{Manejo de la latencia} ($\delta_{\mathit{ext}}$ y $\mathit{ta}$): Al recibir
+    un evento externo, el modelo guarda el nuevo valor en \texttt{caudalObjetivo} y
+    establece $\sigma = 0.5$, obligando al sistema a esperar exactamente el tiempo
+    de latencia especificado antes de aplicar el cambio.
+
+    \item \textbf{Estado pasivo}: Cuando no hay órdenes pendientes, $\sigma = \infty$.
+    El actuador mantiene el caudal actual indefinidamente hasta que el controlador
+    envíe un nuevo evento.
+
+    \item \textbf{Sincronización con el sensor}: La salida \texttt{caudalActual} se
+    conecta en el modelo acoplado a la entrada del Sensor de Flujo, que reportará
+    el cambio medio segundo después de que el controlador emitió la orden.
+
+    \item \textbf{Tipos de datos}: Se utiliza $\mathbb{R}$ para los caudales
+    (0 a 200 ml/h) y \texttt{\{signal\}} para el evento discreto de detención.
+\end{enumerate}
+\section{Módulo de Alarmas}
+
+El modelo \textbf{ModuloAlarmas} gestiona las notificaciones hacia el personal médico,
+emitiendo alertas y manteniendo un ciclo de retransmisión para las alarmas críticas
+no confirmadas.
+
+\begin{center}
+\begin{cmldevs}
+\kw{atomic} ModuloAlarmas \kw{is} <X, Y, S, \dint{}, \dext{}, \clambda{}, \cmlta{}> \kw{where}
+\kw{S is}
+    tipoAlarma : \{BAJA, MEDIA, CRITICA, NINGUNA\};
+    fase       : \{OCIOSO, NOTIFICANDO, ESPERANDO\_CONF, REPETIENDO\};
+    \cmlsigma{}      : \cmlTime{}; \cmlcomment{-- control del tiempo de avance}
+\kw{end S}
+\kw{X is}
+    alarma                : \{baja, media, critica\}; \cmlcomment{-- niveles de alarma}
+    confirmacionEnfermero : \{signal\};               \cmlcomment{-- confirmacion manual}
+\kw{end X}
+\kw{Y is}
+    notificacionAlarma : \kw{Text}; \cmlcomment{-- mensaje hacia el entorno exterior}
+\kw{end Y}
+\dext{}((tipoAlarma, fase, \cmlsigma{}), e, (puerto, valor)) \kw{is}
+    \cmlsigma{} = \cmlsigma{} - e;
+    \kw{defcases}
+        tipoAlarma = valor; fase = NOTIFICANDO; \cmlsigma{} = 0.0; 
+            \kw{if} (puerto = alarma)
+            
+        tipoAlarma = NINGUNA; fase = OCIOSO; \cmlsigma{} = infinity; 
+            \kw{if} (puerto = confirmacionEnfermero)
+    \kw{end defcases}
+\kw{end} \dext{}
+\dint{}(tipoAlarma, fase, \cmlsigma{}) \kw{is}
+    \kw{defcases}
+        fase = ESPERANDO\_CONF; \cmlsigma{} = 30.0; 
+            \kw{if} (tipoAlarma = CRITICA \cmlwedge{} fase = NOTIFICANDO)
+            
+        fase = REPETIENDO; \cmlsigma{} = 10.0; 
+            \kw{if} (tipoAlarma = CRITICA \cmlwedge{} (fase = ESPERANDO\_CONF \cmlvee{} fase = REPETIENDO))
+            
+        tipoAlarma = NINGUNA; fase = OCIOSO; \cmlsigma{} = infinity; 
+            \kw{if} (tipoAlarma = MEDIA \cmlvee{} tipoAlarma = BAJA)
+    \kw{end defcases}
+\kw{end} \dint{}
+\clambda{}(tipoAlarma, fase, \cmlsigma{}) \kw{is}
+    notificacionAlarma = "ALERTA: " + tipoAlarma;
+\kw{end} \clambda{}
+\cmlta{}(tipoAlarma, fase, \cmlsigma{}) \kw{is}
+    \cmlsigma{};
+\kw{end} \cmlta{}
+\kw{end atomic}
+\end{cmldevs}
+\captionof{figure}{Especificación CML-DEVS: Módulo de Alarmas (Corregido)}
+\label{fig:modulo-alarmas}
+\end{center}
+
+\subsection*{Análisis del modelo}
+
+\begin{enumerate}
+    \item \textbf{Puertos de entrada}: El modelo recibe eventos por dos puertos:
+    \texttt{alarma}, con valores enumerados \texttt{\{baja, media, critica\}} que
+    unifican los tres niveles de alerta, y \texttt{confirmacionEnfermero}, de tipo
+    \texttt{signal}, para el reconocimiento manual del personal médico.
+
+    \item \textbf{Estados transitorios} ($ta = 0$): Al recibir cualquier valor en
+    el puerto \texttt{alarma}, la $\delta_{\mathit{ext}}$ actualiza el estado a
+    \texttt{fase = NOTIFICANDO} y asigna $\sigma = 0$, forzando la ejecución inmediata
+    de $\lambda$ para que el mensaje salga al exterior, seguida de $\delta_{\mathit{int}}$.
+
+    \item \textbf{Lógica de repetición para alarma crítica}: Luego de la primera
+    notificación, $\delta_{\mathit{int}}$ transiciona a \texttt{ESPERANDO\_CONF}
+    con $\sigma = 30.0$ segundos. Si en ese lapso no llega la señal \texttt{confirmacionEnfermero}, pasa al estado \texttt{REPETIENDO} con ciclos ininterrumpidos de $\sigma = 10.0$ segundos, cumpliendo estrictamente los requisitos temporales 6 y 7 del proyecto.
+
+    \item \textbf{Alarmas no críticas}: Los valores \texttt{media} y \texttt{baja} se notifican una única vez; luego $\delta_{\mathit{int}}$ resetea el estado a \texttt{OCIOSO} con $\sigma = \infty$.
+
+    \item \textbf{Gestión de confirmación}: Si ingresa el evento \texttt{confirmacionEnfermero} 
+      mientras \texttt{tipoAlarma = CRITICA}, la $\delta_{\mathit{ext}}$ limpia el 
+      estado y detiene el ciclo de repetición asignando $\sigma = \infty$. Si no hay alarma crítica activa, la confirmación es simplemente ignorada manteniendo el cronograma de avance de tiempo intacto.
+\end{enumerate}
+\section{Controlador de Bomba}
+
+El modelo \textbf{ControladorBomba} es el componente central del sistema. Recibe
+órdenes médicas, monitorea el caudal real, detecta desvíos y condiciones de riesgo,
+y coordina las acciones sobre el actuador y el módulo de alarmas.
+
+\begin{center}
+\begin{cmldevs}
+\kw{atomic} ControladorBomba \kw{is} <X, Y, S, \dint{}, \dext{}, \clambda{}, \cmlta{}> \kw{where}
+\kw{S is}
+    caudalObjetivo : \cmlR{};  \cmlcomment{-- dosis indicada por ordenMedica (0-200 ml/h)}
+    caudalReal     : \cmlR{};  \cmlcomment{-- ultima medicion del sensor de flujo}
+    fase : \{OCIOSO, INFUNDIENDO, ALERTA\_BOLSA, ALARMA\_MEDIA, ALARMA\_CRITICA\};
+    contadorMedia  : \kw{N};   \cmlcomment{-- cuenta desvios consecutivos para alarma critica}
+    \cmlsigma{}    : \cmlTime{};  \cmlcomment{-- tiempo para la proxima transicion interna}
+    t\_desvio      : \cmlTime{};  \cmlcomment{-- temporizador de desvio >10\% (limite 5s)}
+    t\_bolsa       : \cmlTime{};  \cmlcomment{-- temporizador tras fin de bolsa (limite 60s)}
+\kw{end S}
+\kw{X is}
+    ordenMedica           : \cmlR{};      \cmlcomment{-- caudal objetivo}
+    sensorFlujo           : \cmlR{};      \cmlcomment{-- caudal real medido}
+    finBolsa              : \{signal\};   \cmlcomment{-- bolsa casi vacia}
+    confirmacionEnfermero : \{signal\};   \cmlcomment{-- acuse de recibo de alarmas}
+\kw{end X}
+\kw{Y is}
+    ajustarCaudal   : \cmlR{};      \cmlcomment{-- comando al actuador}
+    detenerBomba    : \{signal\};   \cmlcomment{-- parada de emergencia al actuador}
+    alarma          : \{baja, media, critica\};  \cmlcomment{-- alertas al ModuloAlarmas}
+    registrarEvento : \kw{Text};    \cmlcomment{-- registro de auditoria}
+\kw{end Y}
+\dext{}((caudalObjetivo, caudalReal, fase, contadorMedia,
+         \cmlsigma{}, t\_desvio, t\_bolsa), e, (puerto, valor)) \kw{is}
+    
+    t\_desvio = t\_desvio - e; 
+    t\_bolsa = t\_bolsa - e;
+
+    \kw{defcases}
+        caudalObjetivo = valor; fase = INFUNDIENDO; \cmlsigma{} = 2.0;
+            \kw{if} (puerto = ordenMedica \cmlwedge{} valor \cmlgt{} 0.0)
+            
+        caudalObjetivo = valor; fase = OCIOSO; \cmlsigma{} = 0.0;
+            \kw{if} (puerto = ordenMedica \cmlwedge{} valor \cmleq{} 0.0)
+            
+        caudalReal = valor; t\_desvio = 5.0; \cmlsigma{} = min(\cmlsigma{} - e, 5.0);
+            \kw{if} (puerto = sensorFlujo \cmlwedge{} t\_desvio = infinity \cmlwedge{} 
+                abs(valor - caudalObjetivo) \cmlgt{} 0.1 * caudalObjetivo)
+            
+        caudalReal = valor; \cmlsigma{} = min(\cmlsigma{} - e, t\_desvio);
+            \kw{if} (puerto = sensorFlujo \cmlwedge{} t\_desvio \cmlneq{} infinity \cmlwedge{} 
+                abs(valor - caudalObjetivo) \cmlgt{} 0.1 * caudalObjetivo)
+            
+        caudalReal = valor; t\_desvio = infinity; 
+        contadorMedia = 0; \cmlsigma{} = \cmlsigma{} - e;
+            \kw{if} (puerto = sensorFlujo \cmlwedge{} 
+                abs(valor - caudalObjetivo) \cmlle{} 0.1 * caudalObjetivo)
+            
+        fase = ALERTA\_BOLSA; t\_bolsa = 60.0; \cmlsigma{} = 0.0;
+            \kw{if} (puerto = finBolsa)
+            
+        fase = OCIOSO; \cmlsigma{} = 0.0; contadorMedia = 0;
+            \kw{if} (puerto = confirmacionEnfermero \cmlwedge{} fase = ALARMA\_CRITICA)
+    \kw{end defcases}
+\kw{end} \dext{}
+\dint{}(caudalObjetivo, caudalReal, fase, contadorMedia, \cmlsigma{}, t\_desvio, t\_bolsa) \kw{is}
+    \kw{defcases}
+        contadorMedia = contadorMedia + 1; fase = ALARMA\_MEDIA; t\_desvio = infinity; 
+        \cmlsigma{} = 0.0;
+            \kw{if} (t\_desvio \cmlle{} 0.0 \cmlwedge{} contadorMedia \cmlle{} 1)
+            
+        contadorMedia = 3; fase = ALARMA\_CRITICA; t\_desvio = infinity; \cmlsigma{} = 0.0;
+            \kw{if} (t\_desvio \cmlle{} 0.0 \cmlwedge{} contadorMedia = 2)
+            
+        caudalObjetivo = 0.0; fase = OCIOSO; t\_bolsa = infinity; \cmlsigma{} = 0.0; 
+            \kw{if} (t\_bolsa \cmlle{} 0.0)
+
+        fase = INFUNDIENDO; \cmlsigma{} = min(t\_desvio, t\_bolsa);
+            \kw{if} (fase = ALARMA\_MEDIA)
+            
+        fase = INFUNDIENDO; \cmlsigma{} = min(t\_desvio, t\_bolsa);
+            \kw{if} (fase = ALERTA\_BOLSA)
+            
+        \cmlsigma{} = min(t\_desvio, t\_bolsa);
+            \kw{if} (fase = INFUNDIENDO \cmlwedge{} t\_bolsa \cmlgt{} 0.0 \cmlwedge{} t\_desvio \cmlgt{} 0.0)
+            
+        \cmlsigma{} = infinity;
+            \kw{if} (fase = ALARMA\_CRITICA \cmlwedge{} t\_bolsa \cmlgt{} 0.0)
+            
+        \cmlsigma{} = infinity;
+            \kw{if} (fase = OCIOSO \cmlwedge{} t\_bolsa \cmlgt{} 0.0)
+    \kw{end defcases}
+\kw{end} \dint{}
+\clambda{}(caudalObjetivo, caudalReal, fase, contadorMedia, \cmlsigma{}, t\_desvio, t\_bolsa) \kw{is}
+    \kw{defcases}
+        ajustarCaudal = caudalObjetivo;
+            \kw{if} (fase = INFUNDIENDO)
+        alarma = baja;
+            \kw{if} (fase = ALERTA\_BOLSA)
+        alarma = media;
+            \kw{if} (fase = ALARMA\_MEDIA)
+        alarma = critica; detenerBomba = signal;
+            \kw{if} (fase = ALARMA\_CRITICA)
+        detenerBomba = signal;
+            \kw{if} (fase = OCIOSO \cmlwedge{} caudalObjetivo = 0.0)
+    \kw{end defcases}
+    registrarEvento = "Evento de control ejecutado";
+\kw{end} \clambda{}
+\cmlta{}(caudalObjetivo, caudalReal, fase, contadorMedia, \cmlsigma{}, t\_desvio, t\_bolsa) \kw{is}
+    \cmlsigma{};
+\kw{end} \cmlta{}
+\kw{end atomic}
+\end{cmldevs}
+\captionof{figure}{Especificación CML-DEVS: Controlador de Bomba (Corregido)}
+\label{fig:controlador-bomba}
+\end{center}
+
+\subsection*{Análisis del modelo}
+
+\begin{enumerate}
+    \item \textbf{Gestión de temporizadores concurrentes}: El modelo maneja múltiples límites de tiempo simultáneos (inicio en 3s, desvío en 5s, fin de bolsa en 60s). Para no perder consistencia temporal, en la $\delta_{\mathit{ext}}$ se resta el tiempo transcurrido $e$ a todos los temporizadores en curso, y la función de avance de tiempo $ta$ siempre retorna la variable de control general $\sigma$, la cual se calcula utilizando la función $min()$ entre los tiempos activos.
+    
+    \item \textbf{Monitoreo de desvío sostenido}: Si la diferencia entre el caudal real y el objetivo supera el 10\%, se inicia un temporizador \texttt{t\_desvio = 5.0}. Es crítico destacar que este reloj solo se inicializa si previamente estaba apagado (\texttt{infinity}). Si el sensor sigue reportando fallas en los segundos posteriores, el reloj continúa su cuenta regresiva sin reiniciarse, garantizando que la alarma suene a los 5 segundos exactos.
+    
+    \item \textbf{Criterio de Escalado y Seguridad}: A diferencia de delegar la lógica en las alarmas, el controlador acumula los desvíos en \texttt{contadorMedia}. Al alcanzar la tercera falla concurrente, la función $\lambda$ emite la alarma crítica y, por el puerto \texttt{detenerBomba}, detiene físicamente el motor, asegurando la propiedad de seguridad (safety) del sistema.
+    
+    \item \textbf{Fin de infusión}: Al recibir la señal \texttt{finBolsa}, el controlador transiciona a \texttt{ALERTA\_BOLSA} y fuerza una salida inmediata para notificar la alarma baja. Inmediatamente después, retoma el estado de infusión dejando correr en paralelo el temporizador \texttt{t\_bolsa = 60.0}. Cuando este tiempo real se agota, el sistema se detiene por completo.
+\end{enumerate}
+\section{Generador de Confirmación de Enfermero}
+
+El modelo \textbf{GeneradorConfirmacion} es un modelo atómico autónomo que genera
+periódicamente eventos \texttt{confirmacionEnfermero}, simulando el reconocimiento
+manual de alarmas por parte del personal médico.
+
+\begin{center}
+\begin{cmldevs}
+\kw{atomic} GeneradorConfirmacion \kw{is} <Y, S, \dint{}, \clambda{}, \cmlta{}> \kw{where}
+\kw{S is}
+    \cmlsigma{} : \cmlTime{};  \cmlcomment{-- tiempo hasta la siguiente confirmacion}
+\kw{end S}
+\kw{Y is}
+    confirmacionEnfermero : \{signal\};  \cmlcomment{-- evento de confirmacion}
+\kw{end Y}
+\dint{}(\cmlsigma{}) \kw{is}
+    \cmlcomment{-- A definir en la implementacion: intervalo entre confirmaciones}
+    \cmlsigma{} = next\_confirmation\_time();
+\kw{end} \dint{}
+\clambda{}(\cmlsigma{}) \kw{is}
+    confirmacionEnfermero = signal;
+\kw{end} \clambda{}
+\cmlta{}(\cmlsigma{}) \kw{is}
+    \cmlsigma{};
+\kw{end} \cmlta{}
+\kw{end atomic}
+\end{cmldevs}
+\captionof{figure}{Especificación CML-DEVS: Generador de Confirmación de Enfermero}
+\label{fig:generador-confirmacion}
+\end{center}
+\section{Generador de Fin de Bolsa}
+
+El modelo \textbf{GeneradorFinBolsa} es un modelo atómico autónomo que genera
+el evento \texttt{finBolsa} cuando la bolsa de medicación está próxima a agotarse.
+El momento del evento se determina en la implementación en base al volumen inicial.
+
+\begin{center}
+\begin{cmldevs}
+\kw{atomic} GeneradorFinBolsa \kw{is} <Y, S, \dint{}, \clambda{}, \cmlta{}> \kw{where}
+\kw{S is}
+    \cmlsigma{} : \cmlTime{};  \cmlcomment{-- tiempo hasta el proximo fin de bolsa}
+\kw{end S}
+\kw{Y is}
+    finBolsa : \{signal\};
+\kw{end Y}
+\dint{}(\cmlsigma{}) \kw{is}
+    \cmlcomment{-- A definir en la implementacion: basado en volumen inicial}
+    \cmlsigma{} = next\_finBolsa\_logic();
+\kw{end} \dint{}
+\clambda{}(\cmlsigma{}) \kw{is}
+    finBolsa = signal;
+\kw{end} \clambda{}
+\cmlta{}(\cmlsigma{}) \kw{is}
+    \cmlsigma{};
+\kw{end} \cmlta{}
+\kw{end atomic}
+\end{cmldevs}
+\captionof{figure}{Especificación CML-DEVS: Generador de Fin de Bolsa}
+\label{fig:generador-fin-bolsa}
+\end{center}
+
+\section{Modelo Acoplado}
+
+La Figura~\ref{fig:acoplado} muestra el modelo acoplado del sistema, 
+especificando los puertos y las conexiones entre los modelos atómicos.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{diagrama.pdf}
+    \caption{Modelo Acoplado del Sistema de Bomba de Infusión}
+    \label{fig:acoplado}
+\end{figure}
+\end{document}
+
