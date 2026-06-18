@@ -7,3 +7,7 @@ Devs.synctex.gz
 venv/
 *.pyc
 __pycache__/
+documentacionNegro/
+opencode.sh
+Devs.pdf
+Documentacion/Devs.pdf
