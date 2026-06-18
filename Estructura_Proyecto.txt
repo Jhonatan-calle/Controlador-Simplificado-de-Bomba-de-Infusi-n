@@ -1,0 +1,39 @@
+proyecto_bomba_infusion/
+│
+├── modelos/
+│   ├── __init__.py
+│   ├── generador_ordenes.py        # GeneradorOrdenes
+│   ├── sensor_flujo.py             # SensorFlujo
+│   ├── actuador_bomba.py           # ActuadorBomba
+│   ├── controlador_bomba.py        # ControladorBomba
+│   ├── modulo_alarmas.py           # ModuloAlarmas
+│   ├── generador_confirmacion.py   # GeneradorConfirmacion
+│   └── generador_fin_bolsa.py      # GeneradorFinBolsa
+│
+├── sistema/
+│   ├── __init__.py
+│   └── sistema_bomba.py            # Modelo acoplado (CoupledDEVS)
+│
+├── escenarios/
+│   ├── escenario_1_normal.py
+│   ├── escenario_2_cambio_orden.py
+│   ├── escenario_3_orden_cero.py
+│   ├── escenario_4_desvio_leve.py
+│   ├── escenario_5_desvio_grave.py
+│   ├── escenario_6_fin_bolsa.py
+│   └── escenario_7_alarma_critica.py
+│
+├── verificacion/
+│   ├── __init__.py
+│   └── verificador_propiedades.py  # Analiza trazas y verifica propiedades
+│
+├── graficos/
+│   ├── __init__.py
+│   └── graficar_resultados.py      # Genera gráficos con matplotlib
+│
+├── logger/
+│   ├── __init__.py
+│   └── event_logger.py             # Logger centralizado de eventos
+│
+├── main.py                         # Punto de entrada; selecciona escenario
+└── requirements.txt
