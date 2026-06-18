@@ -1,41 +1,55 @@
-# Simulación de Sistema de Tiempo Real: Bomba de Infusión Intravenosa
+# Controlador Simplificado de Bomba de Infusión
 
-Este repositorio contiene el desarrollo, modelado y simulación de un sistema automático de administración de medicación intravenosa. El proyecto se enfoca en un **controlador simplificado** que gestiona dosis, sensores de flujo y alarmas críticas, asegurando que las acciones de control cumplan con estrictos requisitos temporales.
+Este proyecto utiliza la herramienta **PythonPDEVS** para la simulación de eventos discretos. A continuación, se detallan los pasos necesarios para configurar el entorno virtual de Python e instalar las dependencias con sus versiones exactas en entornos Linux.
 
-## 👥 Colaboradores
-*   **Jhoantan Calle**
-*   **Hernan Jara**
+## 🚀 Requisitos Previos
 
-## 🚀 Descripción del Proyecto
-El objetivo es construir un modelo de **simulación de eventos discretos** que represente el comportamiento de una bomba de infusión. El sistema recibe órdenes médicas (caudal objetivo), monitorea el caudal real mediante un sensor y reacciona ante desviaciones o el agotamiento de la bolsa de medicación.
+* **Python 3.12** o superior
 
-### Requisitos Temporales Clave:
-*   **Inicio de infusión:** Menos de 3 segundos tras la orden médica.
-*   **Monitoreo:** Muestreo del sensor cada 1 segundo.
-*   **Alarma Media:** Activada si el desvío es > 10% durante más de 5 segundos.
-*   **Seguridad:** Detención automática a los 60 segundos de detectar "Fin de Bolsa".
+---
 
-## 🛠️ Especificación Formal (DEVS)
-El sistema ha sido modelado utilizando el formalismo **DEVS** (Discrete Event System Specification).
+## 🛠️ Guía de Instalación y Configuración
 
-### Modelos Atómicos:
-1.  **Generador de órdenes:** Emite el caudal objetivo (0-200 ml/h).
-2.  **Sensor de flujo:** Mide periódicamente el caudal real.
-3.  **Controlador de bomba:** Cerebro del sistema; toma decisiones de ajuste y alarmas.
-4.  **Actuador de la bomba:** Mecanismo físico que aplica el ajuste (latencia < 0.5s).
-5.  **Módulo de alarmas:** Gestiona notificaciones visuales/sonoras y repeticiones.
+Siga estos pasos en la terminal desde la raíz del proyecto para crear un entorno aislado y ejecutar la simulación:
 
-### Notación Utilizada
-Para la descripción abstracta se utilizó la sintaxis **CML-DEVS** (Conceptual Modeling Language for DEVS), permitiendo una definición matemática y lógica independiente de la plataforma.
+### 1. Clonar el repositorio (si aún no lo ha hecho)
+```bash
+git clone https://github.com/Jhonatan-calle/Controlador-Simplificado-de-Bomba-de-Infusi-n.git
+cd Controlador-Simplificado-de-Bomba-de-Infusi-n
+```
 
-## 💻 Implementación y Herramientas
-*   **Software de Simulación:** [PowerDEVS](http://sourceforge.net/projects/powerdevs/) (u otra herramienta utilizada).
-*   **Lenguaje de Especificación:** CML-DEVS.
-*   **Análisis de Datos:** Registro de trazas de simulación para verificar propiedades de seguridad (*safety*) y vivacidad (*liveness*).
+### 2. Crear el entorno virtual
+Cree un entorno virtual de Python para evitar conflictos con librerías globales:
+```bash
+python3 -m venv venv
+```
 
-## 📊 Escenarios de Simulación
-El repositorio incluye la configuración para testear:
-*   Funcionamiento normal y cambios de dosis en tiempo real.
-*   Escenarios de falla (desvío de caudal > 10% y alarma crítica).
-*   Agotamiento de bolsa y confirmación manual de enfermero.
+### 3. Activar el entorno virtual
+Active el entorno en su sesión de terminal actual:
+```bash
+source venv/bin/activate
+```
+*(Notará el prefijo `(venv)` al inicio de su línea de comandos).*
 
+### 4. Instalar las dependencias
+Instale `setuptools` (requerido para la compatibilidad del instalador de PyDEVS con Python moderno) junto con el módulo local de la herramienta de forma automática:
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## 🧪 Ejecución de la Simulación
+
+Una vez que el entorno esté configurado y activo, puede ejecutar el script principal del controlador de la bomba de infusión mediante el siguiente comando:
+
+```bash
+python3 main.py
+```
+
+## 🛑 Desactivar el Entorno
+
+Cuando finalice la revisión del proyecto, puede salir del entorno virtual ejecutando simplemente:
+```bash
+deactivate
+```
