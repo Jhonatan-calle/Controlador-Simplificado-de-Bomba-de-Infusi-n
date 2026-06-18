@@ -344,6 +344,7 @@ y coordina las acciones sobre el actuador y el módulo de alarmas.
 \begin{center}
 \begin{cmldevs}
 \kw{atomic} ControladorBomba \kw{is} <X, Y, S, \dint{}, \dext{}, \clambda{}, \cmlta{}> \kw{where}
+
 \kw{S is}
     caudalObjetivo : \cmlR{};  \cmlcomment{-- dosis indicada por ordenMedica (0-200 ml/h)}
     caudalReal     : \cmlR{};  \cmlcomment{-- ultima medicion del sensor de flujo}
@@ -353,18 +354,21 @@ y coordina las acciones sobre el actuador y el módulo de alarmas.
     t\_desvio      : \cmlTime{};  \cmlcomment{-- temporizador de desvio >10\% (limite 5s)}
     t\_bolsa       : \cmlTime{};  \cmlcomment{-- temporizador tras fin de bolsa (limite 60s)}
 \kw{end S}
+
 \kw{X is}
     ordenMedica           : \cmlR{};      \cmlcomment{-- caudal objetivo}
     sensorFlujo           : \cmlR{};      \cmlcomment{-- caudal real medido}
     finBolsa              : \{signal\};   \cmlcomment{-- bolsa casi vacia}
     confirmacionEnfermero : \{signal\};   \cmlcomment{-- acuse de recibo de alarmas}
 \kw{end X}
+
 \kw{Y is}
     ajustarCaudal   : \cmlR{};      \cmlcomment{-- comando al actuador}
     detenerBomba    : \{signal\};   \cmlcomment{-- parada de emergencia al actuador}
     alarma          : \{baja, media, critica\};  \cmlcomment{-- alertas al ModuloAlarmas}
     registrarEvento : \kw{Text};    \cmlcomment{-- registro de auditoria}
 \kw{end Y}
+
 \dext{}((caudalObjetivo, caudalReal, fase, contadorMedia,
          \cmlsigma{}, t\_desvio, t\_bolsa), e, (puerto, valor)) \kw{is}
     
@@ -398,6 +402,7 @@ y coordina las acciones sobre el actuador y el módulo de alarmas.
             \kw{if} (puerto = confirmacionEnfermero \cmlwedge{} fase = ALARMA\_CRITICA)
     \kw{end defcases}
 \kw{end} \dext{}
+
 \dint{}(caudalObjetivo, caudalReal, fase, contadorMedia, \cmlsigma{}, t\_desvio, t\_bolsa) \kw{is}
     \kw{defcases}
         contadorMedia = contadorMedia + 1; fase = ALARMA\_MEDIA; t\_desvio = infinity; 
@@ -426,6 +431,7 @@ y coordina las acciones sobre el actuador y el módulo de alarmas.
             \kw{if} (fase = OCIOSO \cmlwedge{} t\_bolsa \cmlgt{} 0.0)
     \kw{end defcases}
 \kw{end} \dint{}
+
 \clambda{}(caudalObjetivo, caudalReal, fase, contadorMedia, \cmlsigma{}, t\_desvio, t\_bolsa) \kw{is}
     \kw{defcases}
         ajustarCaudal = caudalObjetivo;
@@ -457,7 +463,7 @@ y coordina las acciones sobre el actuador y el módulo de alarmas.
     
     \item \textbf{Monitoreo de desvío sostenido}: Si la diferencia entre el caudal real y el objetivo supera el 10\%, se inicia un temporizador \texttt{t\_desvio = 5.0}. Es crítico destacar que este reloj solo se inicializa si previamente estaba apagado (\texttt{infinity}). Si el sensor sigue reportando fallas en los segundos posteriores, el reloj continúa su cuenta regresiva sin reiniciarse, garantizando que la alarma suene a los 5 segundos exactos.
     
-    \item \textbf{Criterio de Escalado y Seguridad}: A diferencia de delegar la lógica en las alarmas, el controlador acumula los desvíos en \texttt{contadorMedia}. Al alcanzar la tercera falla concurrente, la función $\lambda$ emite la alarma crítica y, por el puerto \texttt{detenerBomba}, detiene físicamente el motor, asegurando la propiedad de seguridad (safety) del sistema.
+    \item \textbf{Criterio de Escalado y Seguridad}: El equipo definió como criterio propio (según el requisito de la consigna que delega en cada grupo la definición del escalado) que, tras emitir una \texttt{alarmaMedia} sin que el desvío se corrija, el controlador contabiliza la falla en \texttt{contadorMedia}. Al alcanzar dos desvíos sostenidos consecutivos (que generan dos alarmas medias), el controlador escala a \texttt{alarmaCritica} y, por el puerto \texttt{detenerBomba}, detiene físicamente el motor, cumpliendo así con la propiedad de seguridad (safety) del sistema.
     
     \item \textbf{Fin de infusión}: Al recibir la señal \texttt{finBolsa}, el controlador transiciona a \texttt{ALERTA\_BOLSA} y fuerza una salida inmediata para notificar la alarma baja. Inmediatamente después, retoma el estado de infusión dejando correr en paralelo el temporizador \texttt{t\_bolsa = 60.0}. Cuando este tiempo real se agota, el sistema se detiene por completo.
 \end{enumerate}
