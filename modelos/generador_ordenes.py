@@ -1,11 +1,11 @@
 from pypdevs.DEVS import AtomicDEVS
-from pypdevs.infinity import INFINITY
 
 
 class GeneradorOrdenes(AtomicDEVS):
     def __init__(self, name="GeneradorOrdenes"):
         AtomicDEVS.__init__(self, name)
         self.ordenMedica = self.addOutPort("ordenMedica")
+
         # TODO: definir el estado inicial correcto
         self.state = {
             "caudalProximo": 0.0,
