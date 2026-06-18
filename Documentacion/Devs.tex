@@ -80,7 +80,7 @@ que genera periódicamente eventos \texttt{ordenMedica}, indicando el caudal obj
 que debe administrar la bomba. Las órdenes pueden generarse de manera determinística
 o estocástica según los escenarios definidos.
 
-\begin{figure}[H]
+\begin{center}
 \begin{cmldevs}
 \kw{atomic} GeneradorOrdenes \kw{is} <Y, S, \dint{}, \clambda{}, \cmlta{}> \kw{where}
 \kw{S is}
@@ -107,9 +107,9 @@ o estocástica según los escenarios definidos.
 \kw{end} \cmlta{}
 \kw{end atomic}
 \end{cmldevs}
-\caption{Especificación CML-DEVS: Generador de Órdenes Médicas}
+\captionof{figure}{Especificación CML-DEVS: Generador de Órdenes Médicas}
 \label{fig:generador-ordenes}
-\end{figure}
+\end{center}
 
 
 \section{Sensor de Flujo}
@@ -118,7 +118,7 @@ El modelo \textbf{SensorFlujo} reporta periódicamente el caudal real cada 1 seg
 Cuando recibe una actualización del actuador, incorpora ese valor para que la próxima
 medición refleje el estado físico real de la bomba.
 
-\begin{figure}[H]
+\begin{center}
 \begin{cmldevs}
 \kw{atomic} SensorFlujo \kw{is} <X, Y, S, \dint{}, \dext{}, \clambda{}, \cmlta{}> \kw{where}
 \kw{S is}
@@ -153,9 +153,9 @@ medición refleje el estado físico real de la bomba.
 \kw{end} \cmlta{}
 \kw{end atomic}
 \end{cmldevs}
-\caption{Especificación CML-DEVS: Sensor de Flujo}
+\captionof{figure}{Especificación CML-DEVS: Sensor de Flujo}
 \label{fig:sensor-flujo}
-\end{figure}
+\end{center}
 
 \subsection*{Análisis del modelo}
 
@@ -188,21 +188,25 @@ El modelo \textbf{ActuadorBomba} representa la interfaz física de la bomba: rec
 comandos lógicos del controlador y, tras una latencia de 0.5 segundos, actualiza
 el caudal real suministrado al paciente.
 
-\begin{figure}[H]
+\begin{center}
 \begin{cmldevs}
 \kw{atomic} ActuadorBomba \kw{is} <X, Y, S, \dint{}, \dext{}, \clambda{}, \cmlta{}> \kw{where}
+
 \kw{S is}
     caudalFisico   : \cmlR{};       \cmlcomment{-- caudal que actualmente sale de la bomba}
     caudalObjetivo : \cmlR{};       \cmlcomment{-- caudal a alcanzar tras la latencia}
     \cmlsigma{}            : \cmlTime{};    \cmlcomment{-- controla la latencia de 0.5 segundos}
 \kw{end S}
+
 \kw{X is}
     ajustarCaudal : \cmlR{};        \cmlcomment{-- nuevo valor de dosis desde el controlador}
     detenerBomba  : \{signal\};     \cmlcomment{-- senal de parada de emergencia}
 \kw{end X}
+
 \kw{Y is}
     caudalActual : \cmlR{};         \cmlcomment{-- notifica el cambio fisico al Sensor}
 \kw{end Y}
+
 \dext{}((caudalFisico, caudalObjetivo, \cmlsigma{}), e, (puerto, valor)) \kw{is}
     \kw{defcases}
         caudalObjetivo = valor;   \kw{if} (puerto = ajustarCaudal)
@@ -211,23 +215,27 @@ el caudal real suministrado al paciente.
         \cmlsigma{} = 0.5;
     \kw{end defcases}
 \kw{end} \dext{}
+
 \dint{}(caudalFisico, caudalObjetivo, \cmlsigma{}) \kw{is}
     \cmlcomment{-- Cumplida la latencia, el caudal fisico alcanza al objetivo}
     caudalFisico = caudalObjetivo;
     \cmlsigma{}          = infinity;
 \kw{end} \dint{}
+
 \clambda{}(caudalFisico, caudalObjetivo, \cmlsigma{}) \kw{is}
     \cmlcomment{-- Emite el nuevo caudal real antes de pasar al estado pasivo}
     caudalActual = caudalObjetivo;
 \kw{end} \clambda{}
+
 \cmlta{}(caudalFisico, caudalObjetivo, \cmlsigma{}) \kw{is}
     \cmlsigma{};
 \kw{end} \cmlta{}
+
 \kw{end atomic}
 \end{cmldevs}
-\caption{Especificación CML-DEVS: Actuador de la Bomba}
+\captionof{figure}{Especificación CML-DEVS: Actuador de la Bomba}
 \label{fig:actuador-bomba}
-\end{figure}
+\end{center}
 
 \subsection*{Análisis del modelo}
 
@@ -285,7 +293,8 @@ no confirmadas.
             \kw{if} (tipoAlarma = CRITICA \cmlwedge{} fase = NOTIFICANDO)
             
         fase = REPETIENDO; \cmlsigma{} = 10.0; 
-            \kw{if} (tipoAlarma = CRITICA \cmlwedge{} (fase = ESPERANDO\_CONF \cmlvee{} fase = REPETIENDO))
+            \kw{if} (tipoAlarma = CRITICA \cmlwedge{} 
+            (fase = ESPERANDO\_CONF \cmlvee{} fase = REPETIENDO))
             
         tipoAlarma = NINGUNA; fase = OCIOSO; \cmlsigma{} = infinity; 
             \kw{if} (tipoAlarma = MEDIA \cmlvee{} tipoAlarma = BAJA)
