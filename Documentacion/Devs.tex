@@ -122,9 +122,10 @@ medición refleje el estado físico real de la bomba.
 \begin{cmldevs}
 \kw{atomic} SensorFlujo \kw{is} <X, Y, S, \dint{}, \dext{}, \clambda{}, \cmlta{}> \kw{where}
 \kw{S is}
-    caudalMedido  : \cmlR{};  \cmlcomment{-- valor de caudal a reportar}
-    caudalActuador : \cmlR{};  \cmlcomment{-- ultimo valor recibido del actuador}
-    \cmlsigma{}           : \cmlTime{}; \cmlcomment{-- controla el periodo de muestreo (1 s)}
+    caudalMedido    : \cmlR{};     \cmlcomment{-- valor de caudal a reportar}
+    caudalActuador  : \cmlR{};     \cmlcomment{-- ultimo valor recibido del actuador}
+    tiempoActuador  : \cmlTime{};  \cmlcomment{-- tiempo desde la ultima actualizacion del actuador}
+    \cmlsigma{}               : \cmlTime{}; \cmlcomment{-- controla el periodo de muestreo (1 s)}
 \kw{end S}
 \kw{X is}
     caudalActual : \cmlR{};  \cmlcomment{-- caudal fisico recibido del actuador}
@@ -132,20 +133,22 @@ medición refleje el estado físico real de la bomba.
 \kw{Y is}
     sensorFlujo  : \cmlR{};  \cmlcomment{-- medicion enviada al Controlador}
 \kw{end Y}
-\dext{}((caudalMedido, caudalActuador, \cmlsigma{}), e, (puerto, valor)) \kw{is}
-    caudalActuador = valor;
-    \cmlsigma{} = \cmlsigma{} - e;
+\dext{}((caudalMedido, caudalActuador, tiempoActuador, \cmlsigma{}), e, (puerto, valor)) \kw{is}
+    caudalActuador  = valor;
+    tiempoActuador  = 0;
+    \cmlsigma{}     = \cmlsigma{} - e;
         \kw{if} (puerto = caudalActual)
 \kw{end} \dext{}
-\dint{}(caudalMedido, caudalActuador, \cmlsigma{}) \kw{is}
-    \cmlcomment{-- Si hay valor del actuador lo usa, sino genera internamente}
-    caudalMedido = next\_caudal\_logic(caudalActuador);
-    \cmlsigma{}          = 1.0;
+\dint{}(caudalMedido, caudalActuador, tiempoActuador, \cmlsigma{}) \kw{is}
+    \cmlcomment{-- Incorpora el tiempo desde la ultima actualizacion para modelar deriva}
+    caudalMedido  = next\_caudal\_logic(caudalActuador, tiempoActuador);
+    tiempoActuador = tiempoActuador + \cmlsigma{};
+    \cmlsigma{}   = 1.0;
 \kw{end} \dint{}
-\clambda{}(caudalMedido, caudalActuador, \cmlsigma{}) \kw{is}
+\clambda{}(caudalMedido, caudalActuador, tiempoActuador, \cmlsigma{}) \kw{is}
     sensorFlujo = caudalMedido;
 \kw{end} \clambda{}
-\cmlta{}(caudalMedido, caudalActuador, \cmlsigma{}) \kw{is}
+\cmlta{}(caudalMedido, caudalActuador, tiempoActuador, \cmlsigma{}) \kw{is}
     \cmlsigma{};
 \kw{end} \cmlta{}
 \kw{end atomic}
@@ -163,12 +166,20 @@ medición refleje el estado físico real de la bomba.
 
     \item \textbf{Incorporación del valor del actuador} ($\delta_{\mathit{ext}}$):
     Al recibir \texttt{caudalActual} desde el actuador, el modelo almacena el valor
-    en \texttt{caudalActuador} y mantiene el cronograma con $\sigma = \sigma - e$.
-    En la próxima transición interna, \texttt{next\_caudal\_logic(caudalActuador)}
-    utiliza ese valor para generar la medición.
+    en \texttt{caudalActuador}, resetea \texttt{tiempoActuador} a 0 y mantiene el
+    cronograma con $\sigma = \sigma - e$. En la próxima transición interna,
+    \texttt{next\_caudal\_logic(caudalActuador, tiempoActuador)} utiliza ese valor
+    y el tiempo transcurrido desde la última actualización para generar la medición.
+
+    \item \textbf{Deriva temporal} ($\delta_{\mathit{int}}$):
+    El campo \texttt{tiempoActuador} acumula el tiempo desde la última actualización
+    del actuador sumando el $\sigma$ anterior en cada transición interna. Esto
+    permite que la medición se desvíe del valor base del actuador a medida que
+    pasa el tiempo sin una nueva corrección, modelando una deriva física realista.
 
     \item \textbf{Estado inicial} ($S$): Se asume \texttt{caudalMedido} $= 0.0$,
-    \texttt{caudalActuador} $= 0.0$ y $\sigma = 1.0$.
+    \texttt{caudalActuador} $= 0.0$, \texttt{tiempoActuador} $= 0.0$ y
+    $\sigma = 1.0$.
 \end{enumerate}
 
 \section{Actuador de la Bomba}
