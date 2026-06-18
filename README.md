@@ -5,7 +5,6 @@ Este proyecto utiliza la herramienta **PythonPDEVS** para la simulación de even
 ## 🚀 Requisitos Previos
 
 * **Python 3.12** o superior
-* **Git** instalado en el sistema
 
 ---
 
@@ -47,8 +46,6 @@ Una vez que el entorno esté configurado y activo, puede ejecutar el script prin
 ```bash
 python3 main.py
 ```
-
-*(Nota: Asegúrese de reemplazar `main.py` por el nombre real de su archivo ejecutable si este cambia).*
 
 ## 🛑 Desactivar el Entorno
 
