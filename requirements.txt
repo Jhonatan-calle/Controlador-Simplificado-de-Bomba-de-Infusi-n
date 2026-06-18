@@ -1,2 +1,3 @@
 ./PythonPDEVS/src
 setuptools==82.0.1
+pytest==7.4.4
