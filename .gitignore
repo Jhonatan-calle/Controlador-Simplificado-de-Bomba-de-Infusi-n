@@ -5,3 +5,6 @@ Devs.log
 Devs.out
 Devs.pdf
 Devs.synctex.gz
+venv/
+*.pyc
+__pycache__/
