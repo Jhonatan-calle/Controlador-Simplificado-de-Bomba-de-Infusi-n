@@ -15,7 +15,7 @@ Siga estos pasos en la terminal desde la raíz del proyecto para crear un entorn
 
 ### 1. Clonar el repositorio (si aún no lo ha hecho)
 ```bash
-git clone <URL_DE_TU_REPOSITORIO>
+git clone https://github.com/Jhonatan-calle/Controlador-Simplificado-de-Bomba-de-Infusi-n.git
 cd Controlador-Simplificado-de-Bomba-de-Infusi-n
 ```
 
