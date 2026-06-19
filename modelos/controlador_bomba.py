@@ -257,3 +257,7 @@ class ControladorBomba(AtomicDEVS):
         nuevo["sigma"] = INFINITY
         return nuevo
 
+def _sigma_min(t_desvio: float, t_bolsa: float) -> float:
+    """Devuelve el mínimo de los timers activos (ignora INFINITY)."""
+    candidatos = [t for t in (t_desvio, t_bolsa) if t != INFINITY and t > 0]
+    return min(candidatos) if candidatos else INFINITY
