@@ -42,7 +42,7 @@ class GeneradorOrdenes(AtomicDEVS):
 
 
         #Estado inicial
-        self.state = self._estado_incial()
+        self.state = self._estado_inicial()
 
 
     def timeAdvance(self):
