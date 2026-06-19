@@ -51,7 +51,7 @@ NOMBRES = {
 
 
 def correr_simulacion(num_escenario: int = 1, tiempo: float = 100.0,
-                      verbose: bool = True) -> None:
+                      verbose: bool = True):
     config = ESCENARIOS[num_escenario]
     nombre = NOMBRES[num_escenario]
 
@@ -64,7 +64,8 @@ def correr_simulacion(num_escenario: int = 1, tiempo: float = 100.0,
     sim    = Simulator(modelo)
     sim.setVerbose()
     sim.setClassicDEVS()
-    sim.simulate(tiempo)
+    sim.setTerminationTime(tiempo)
+    sim.simulate()
 
     print(f"\n{'='*60}")
     print("  Simulación completada")
