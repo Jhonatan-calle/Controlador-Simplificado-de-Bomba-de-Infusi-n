@@ -1,19 +1,41 @@
+"""
+modelos/actuador_bomba.py
+ 
+Modelo atómico ActuadorBomba.
+Recibe comandos del controlador y, tras una latencia de 0.5 s,
+actualiza el caudal físico y notifica al SensorFlujo.
+"""
+
 from pypdevs.DEVS import AtomicDEVS
 from pypdevs.infinity import INFINITY
 from config import LATENCIA_ACTUADOR
 
 class ActuadorBomba(AtomicDEVS):
-    def __init__(self, config: dict):
-        super().__init__("ActuadorBomba")
-
-        # Puertos de entrada y salida
+    
+    """
+    Interfaz física de la bomba con latencia de respuesta.
+ 
+    Puertos de entrada:
+        ajustarCaudal — float (nuevo caudal objetivo desde el Controlador)
+        detenerBomba  — signal (parada de emergencia desde el Controlador)
+ 
+    Puertos de salida:
+        caudalActual — float (caudal físico notificado al SensorFlujo)
+    """
+ 
+    def __init__(self, config: dict, name: str = "ActuadorBomba"):
+        super().__init__(name)
+ 
+        # Puertos De Entrada
         self.ajustarCaudal = self.addInPort("ajustarCaudal")
-        self.detenerBomba = self.addInPort("detenerBomba")
-        self.caudalActual = self.addOutPort("caudalActual")
+        self.detenerBomba  = self.addInPort("detenerBomba")
+        # Puertos De Salida
+        self.caudalActual  = self.addOutPort("caudalActual")
+ 
+        cfg = config["actuador"]
+        self._factor_falla = cfg["factor_falla"]
 
-        self.factor_falla = config.get("factor_falla", 1.0)
-
-        # Estado formal
+        # Estado inicial: pasivo, sin caudal
         self.state = {
             "caudalFisico": 0.0,
             "caudalObjetivo": 0.0,
@@ -24,51 +46,32 @@ class ActuadorBomba(AtomicDEVS):
         return self.state["sigma"]
 
     def outputFnc(self):
-        # Emite el caudal nuevo (caudalObjetivo), no el viejo
-        return {self.caudalActual: self.state["caudalObjetivo"]}
+        # El caudal real que llega al paciente aplica el factor de falla
+        caudal_real = self.state["caudalObjetivo"] * self._factor_falla
+        return {self.caudalActual: caudal_real}
 
     def extTransition(self, inputs):
-        # Actualizamos el sigma transcurrido
-        self.state["sigma"] -= self.elapsed
+        """Recibe una orden y programa la actualizacion tras la latencia."""
+        nuevo_estado = dict(self.state)
         
-        # Vemos por qué puerto entró el mensaje
-        if self.detenerBomba in inputs:
-            valor = inputs[self.detenerBomba]
-            nuevo_objetivo = procesar_comando("detenerBomba", valor, self.factor_falla)
+        if self.detenerBomba in input:
+
+            nuevo_estado["caudalObjetivo"] = 0.0
+            nuevo_estado["sigma"] = LATENCIA_ACTUADOR
+        
         elif self.ajustarCaudal in inputs:
-            valor = inputs[self.ajustarCaudal]
-            nuevo_objetivo = procesar_comando("ajustarCaudal", valor, self.factor_falla)
-        else:
-            return self.state
-
-
-        self.state["caudalObjetivo"] = nuevo_objetivo
-        
-        # El actuador tarda LATENCIA_ACTUADOR (0.5s) en hacer efectivo el cambio
-        self.state["sigma"] = LATENCIA_ACTUADOR
-        
-        return self.state
+            
+            nuevo_estado["caudalObjetivo"] = inputs[self.ajustarCaudal]
+            nuevo_estado["sigma"] = LATENCIA_ACTUADOR
+ 
+        return nuevo_estado
 
     def intTransition(self):
-        # Se concreta el cambio físico
-        self.state["caudalFisico"] = self.state["caudalObjetivo"]
-        self.state["sigma"] = INFINITY
-        return self.state
+        """Cumplida la latencia, el caudal fisico alcanza al objetivo."""
+        return { 
+            "caudalFisico": self.state["caudalObjetivo"] * self._factor_falla,
+            "caudalObjetivo": self.state["caudalObjetivo"],
+            "sigma": INFINITY,
+        }
+        
             
-
-###################################################
-def procesar_comando(puerto_nombre: str, valor: float, factor_falla: float) -> float:
-    """
-    Decide el nuevo caudal objetivo según el puerto que disparó extTransition.
-    'ajustarCaudal' aplica el factor_falla (simula degradación mecánica);
-    'detenerBomba' siempre lleva a 0 sin importar el factor_falla.
-    """
-    if puerto_nombre == "detenerBomba":
-        return 0.0
-    if puerto_nombre == "ajustarCaudal":
-        if valor is None:
-            return 0.0
-        return valor * factor_falla
-    raise ValueError(f"Puerto desconocido para ActuadorBomba: {puerto_nombre}")
-
-#####################################################
