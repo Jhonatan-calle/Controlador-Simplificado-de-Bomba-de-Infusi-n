@@ -1,6 +1,6 @@
-# Copyright 2014 Modelling, Simulation and Design Lab (MSDL) at
+# Copyright 2014 Modelling, Simulation and Design Lab (MSDL) at 
 # McGill University and the University of Antwerp (http://msdl.cs.mcgill.ca/)
-#
+# 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,28 +16,22 @@
 """
 Controller used as a specific simulation kernel
 """
-
+from pypdevs.basesimulator import BaseSimulator
+from pypdevs.logger import *
 import threading
-
 import pypdevs.accurate_time as time
 import pypdevs.middleware as middleware
-from pypdevs.activityVisualisation import visualizeLocations
-from pypdevs.basesimulator import BaseSimulator
-from pypdevs.DEVS import AtomicDEVS, CoupledDEVS
-from pypdevs.logger import *
-from pypdevs.realtime.asynchronousComboGenerator import (
-    AsynchronousComboGenerator,
-)
-from pypdevs.realtime.threadingBackend import ThreadingBackend
+from pypdevs.DEVS import CoupledDEVS, AtomicDEVS
 from pypdevs.util import DEVSException
-
+from pypdevs.activityVisualisation import visualizeLocations
+from pypdevs.realtime.threadingBackend import ThreadingBackend
+from pypdevs.realtime.asynchronousComboGenerator import AsynchronousComboGenerator
 
 class Controller(BaseSimulator):
     """
     The controller class, which is a special kind of normal simulation kernel. This should always run on the node labeled 0.
     It contains some functions that are only required to be ran on a single node, such as GVT initiation
     """
-
     def __init__(self, name, model, server):
         """
         Constructor
@@ -78,7 +72,7 @@ class Controller(BaseSimulator):
     def isFinished(self, running):
         """
         Checks if all kernels have indicated that they have finished simulation.
-        If each kernel has indicated this, a final (expensive) check happens to
+        If each kernel has indicated this, a final (expensive) check happens to 
         prevent premature termination.
 
         :param running: the number of kernels that is simulating
@@ -133,9 +127,8 @@ class Controller(BaseSimulator):
         # Start up the GVT algorithm then
         self.event_gvt = threading.Event()
         self.run_gvt = True
-        self.gvt_thread = threading.Thread(
-            target=Controller.threadGVT, args=[self, gvt_interval]
-        )
+        self.gvt_thread = threading.Thread(target=Controller.threadGVT,
+                                          args=[self, gvt_interval])
         self.gvt_thread.daemon = True
         self.gvt_thread.start()
 
@@ -150,10 +143,11 @@ class Controller(BaseSimulator):
         self.event_gvt.wait(freq)
         # Maybe simulation already finished...
         while self.run_gvt:
-            self.receiveControl(
-                [float("inf"), float("inf"), self.accumulator, {}],
-                True,
-            )
+            self.receiveControl([float('inf'), 
+                                 float('inf'), 
+                                 self.accumulator, 
+                                 {}], 
+                                True)
             # Wait until the lock is released elsewhere
             print("Waiting for clear")
             self.wait_for_gvt.wait()
@@ -187,10 +181,7 @@ class Controller(BaseSimulator):
         self.checkForTemporaryIrreversible()
         self.no_finish_ring.release()
         if self.location_cell_view:
-            from pypdevs.activityVisualisation import (
-                visualizeLocations,
-            )
-
+            from pypdevs.activityVisualisation import visualizeLocations
             visualizeLocations(self)
         # Call superclass (the actual simulation)
         BaseSimulator.simulate(self)
@@ -214,8 +205,8 @@ class Controller(BaseSimulator):
 
     def runAllocator(self):
         """
-        Actually extract the graph of exchanged messages and run the allocator with this information.
-
+        Actually extract the graph of exchanged messages and run the allocator with this information. 
+        
         Results are cached.
 
         :returns: tuple -- the event graph and the allocations
@@ -229,21 +220,16 @@ class Controller(BaseSimulator):
                 self.allocations = None
             else:
                 from pypdevs.util import constructGraph, saveLocations
-
                 self.graph = constructGraph(self.model)
-                allocs = self.initialAllocator.allocate(
-                    self.model.component_set,
-                    self.getEventGraph(),
-                    self.kernels,
-                    self.total_activities,
-                )
+                allocs = self.initialAllocator.allocate(self.model.component_set,
+                                                        self.getEventGraph(),
+                                                        self.kernels,
+                                                        self.total_activities)
                 self.allocations = allocs
                 self.initial_allocator = None
-                saveLocations(
-                    "locationsave.txt",
-                    self.allocations,
-                    self.model_ids,
-                )
+                saveLocations("locationsave.txt", 
+                              self.allocations, 
+                              self.model_ids)
         return self.graph, self.allocations
 
     def setCellLocationTracer(self, x, y, location_cell_view):
@@ -289,9 +275,7 @@ class Controller(BaseSimulator):
         # Do this once, to prevent checks for the classic DEVS formalism
         if classic_DEVS:
             # Methods, so CamelCase
-            self.coupledOutputGeneration = (
-                self.coupledOutputGenerationClassic
-            )
+            self.coupledOutputGeneration = self.coupledOutputGenerationClassic
 
     def setAllocator(self, initial_allocator):
         """
@@ -302,12 +286,8 @@ class Controller(BaseSimulator):
         self.initial_allocator = initial_allocator
         if initial_allocator is not None:
             # Methods, so CamelCase
-            self.atomicOutputGeneration_backup = (
-                self.atomicOutputGeneration
-            )
-            self.atomicOutputGeneration = (
-                self.atomicOutputGenerationEventTracing
-            )
+            self.atomicOutputGeneration_backup = self.atomicOutputGeneration
+            self.atomicOutputGeneration = self.atomicOutputGenerationEventTracing
 
     def setDSDEVS(self, dsdevs):
         """
@@ -329,7 +309,7 @@ class Controller(BaseSimulator):
     def setTerminationCondition(self, termination_condition):
         """
         Sets the termination condition of this simulation kernel.
-
+    
         As soon as the condition is valid, it willl signal all nodes that they have to stop simulation as soon as they have progressed up to this simulation time.
 
         :param termination_condition: a function that accepts two parameters: *time* and *model*. Function returns whether or not to halt simulation
@@ -346,10 +326,8 @@ class Controller(BaseSimulator):
         :param horizon: the horizon used in this activity tracking
         """
         # Now start moving all models according to the provided relocation directives
-        relocate = self.relocator.getRelocations(
-            gvt, activities, horizon
-        )
-        # print("Filtered relocate: " + str(relocate))
+        relocate = self.relocator.getRelocations(gvt, activities, horizon)
+        #print("Filtered relocate: " + str(relocate))
 
         if relocate:
             self.performRelocationsInit(relocate)
@@ -361,19 +339,15 @@ class Controller(BaseSimulator):
 
         :param relocate: dictionary containing the model_id as key and the value is the node to send it to
         """
-        relocate = {
-            key: relocate[key]
-            for key in relocate
-            if self.model_ids[key].location != relocate[key]
-            and self.model_ids[key].relocatable
-        }
+        relocate = {key: relocate[key] 
+                for key in relocate 
+                if self.model_ids[key].location != relocate[key] and 
+                        self.model_ids[key].relocatable}
         if not relocate:
             return
 
         if self.running_irreversible is not None:
-            self.getProxy(
-                self.running_irreversible
-            ).unsetIrreversible()
+            self.getProxy(self.running_irreversible).unsetIrreversible()
             self.running_irreversible = None
 
         while not self.no_finish_ring.acquire(False):
@@ -398,21 +372,15 @@ class Controller(BaseSimulator):
             if kernels[destination] == 1:
                 # We are the first to lock it, so actually send the lock
                 self.getProxy(destination).requestMigrationLock()
-            relocation_rules.setdefault(
-                (source, destination), set()
-            ).add(model_id)
+            relocation_rules.setdefault((source, destination), set()).add(model_id)
         while relocation_rules:
             # Busy loop until everything is done
             # Don't use an iterator, as we will change the list
             for source, destination in relocation_rules.keys():
-                if (
-                    source in self.locked_kernels
-                    and destination in self.locked_kernels
-                ):
+                if (source in self.locked_kernels and 
+                        destination in self.locked_kernels):
                     models = relocation_rules[(source, destination)]
-                    self.getProxy(source).migrateTo(
-                        destination, models
-                    )
+                    self.getProxy(source).migrateTo(destination, models)
                     del relocation_rules[(source, destination)]
                     kernels[source] -= len(models)
                     kernels[destination] -= len(models)
@@ -523,9 +491,7 @@ class Controller(BaseSimulator):
             for port in model.OPorts:
                 self.dsRemovePort(port)
         else:
-            raise DEVSException(
-                "Unknown model to schedule: %s" % model
-            )
+            raise DEVSException("Unknown model to schedule: %s" % model)
 
     def dsScheduleModel(self, model):
         """
@@ -534,9 +500,7 @@ class Controller(BaseSimulator):
         :param model: the model to add
         """
         if isinstance(model, CoupledDEVS):
-            model.full_name = (
-                model.parent.full_name + "." + model.getModelName()
-            )
+            model.full_name = model.parent.full_name + "." + model.getModelName()
             for m in model.component_set:
                 self.dsScheduleModel(m)
             for p in model.IPorts:
@@ -545,9 +509,7 @@ class Controller(BaseSimulator):
                 self.dc_altered.add(p)
         elif isinstance(model, AtomicDEVS):
             model.model_id = len(self.model_ids)
-            model.full_name = (
-                model.parent.full_name + "." + model.getModelName()
-            )
+            model.full_name = model.parent.full_name + "." + model.getModelName()
             model.location = self.name
             self.model_ids.append(model)
             self.destinations.append(model)
@@ -562,10 +524,7 @@ class Controller(BaseSimulator):
                 p = p.parent
             if model.time_next[0] == self.current_clock[0]:
                 # If scheduled for 'now', update the age manually
-                model.time_next = (
-                    model.time_next[0],
-                    self.current_clock[1],
-                )
+                model.time_next = (model.time_next[0], self.current_clock[1])
             # It is a new model, so add it to the scheduler too
             self.model.scheduler.schedule(model)
             for p in model.IPorts:
@@ -573,19 +532,9 @@ class Controller(BaseSimulator):
             for p in model.OPorts:
                 self.dc_altered.add(p)
         else:
-            raise DEVSException(
-                "Unknown model to schedule: %s" % model
-            )
+            raise DEVSException("Unknown model to schedule: %s" % model)
 
-    def setRealTime(
-        self,
-        subsystem,
-        generator_file,
-        ports,
-        scale,
-        listeners,
-        args=[],
-    ):
+    def setRealTime(self, subsystem, generator_file, ports, scale, listeners, args=[]):
         """
         Set the use of realtime simulation
 
@@ -599,10 +548,8 @@ class Controller(BaseSimulator):
         self.realtime = True
         self.threading_backend = ThreadingBackend(subsystem, args)
         self.rt_zerotime = time.time()
-        async_gen = AsynchronousComboGenerator(
-            generator_file, self.threading_backend
-        )
-        self.asynchronous_generator = async_gen
+        async = AsynchronousComboGenerator(generator_file, self.threading_backend)
+        self.asynchronous_generator = async
         self.realtime_starttime = time.time()
         self.portmap = ports
         self.model.listeners = listeners
@@ -633,9 +580,7 @@ class Controller(BaseSimulator):
         # Call the node that hosts this model and order it to recompute timeAdvance
         proxy = self.getProxy(self.model_ids[model_id].location)
         proxy.recomputeTA(model_id, self.prev_termination_time)
-        self.tracers.tracesUser(
-            self.prev_termination_time,
-            self.model_ids[model_id],
-            variable,
-            value,
-        )
+        self.tracers.tracesUser(self.prev_termination_time, 
+                                self.model_ids[model_id], 
+                                variable, 
+                                value)
