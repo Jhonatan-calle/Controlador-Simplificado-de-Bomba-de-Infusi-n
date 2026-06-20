@@ -16,6 +16,9 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from pypdevs.simulator import Simulator
 from sistema.sistema_bomba import SistemaBomba
+from logger.event_logger import EventLogger
+from verificacion.verificador_propiedades import VerificadorPropiedades
+
 from config import (
     ESCENARIO_1_NORMAL,
     ESCENARIO_2_CAMBIO_ORDEN,
@@ -60,15 +63,21 @@ def correr_simulacion(num_escenario: int = 1, tiempo: float = 100.0,
     print(f"  Duración: {tiempo} s")
     print(f"{'='*60}\n")
 
+    logger = EventLogger()
     modelo = SistemaBomba(config)
     sim    = Simulator(modelo)
-    sim.setVerbose()
+    sim.setCustomTracer("logger.event_logger", "TracerEventLogger", [logger])
     sim.setClassicDEVS()
     sim.setTerminationTime(tiempo)
     sim.simulate()
 
+    v = VerificadorPropiedades(logger, config)
+    for r in v.verificar_todo():
+        print(f"[{'✓' if r.cumplida else '✗'}] {r.propiedad} — {r.detalle}")
+
     print(f"\n{'='*60}")
     print("  Simulación completada")
+    print(f"  Eventos capturados: {len(logger.todos())}")
     print(f"{'='*60}\n")
 
 

@@ -2,6 +2,7 @@
 logger/event_logger.py
 
 Captura y almacena eventos de la simulación para análisis posterior.
+Contiene TracerEventLogger para integrarse con PythonPDEVS.
 """
 
 from dataclasses import dataclass, field
@@ -52,3 +53,63 @@ class EventLogger:
         lines = [f"  t={e.tiempo:.3f}  [{e.modelo}] {e.puerto} = {e.valor}"
                  for e in self._log]
         return "EventLog:\n" + "\n".join(lines)
+
+
+class TracerEventLogger:
+    """
+    Tracer de pypdevs que captura eventos en un EventLogger.
+    Se conecta usando sim.setCustomTracer().
+    """
+
+    def __init__(self, uid, server, event_logger, *args):
+        self.uid = uid
+        self.server = server
+        self.logger = event_logger
+
+    def startTracer(self, recover):
+        pass
+
+    def stopTracer(self):
+        pass
+
+    def traceInit(self, aDEVS, t):
+        self.logger.registrar(
+            float(t[0]), aDEVS.getModelFullName(),
+            "STATE_INIT", dict(aDEVS.state) if aDEVS.state else None
+        )
+
+    def _log_output(self, aDEVS):
+        """Registra todos los mensajes emitidos por outputFnc."""
+        if aDEVS.my_output is None:
+            return
+        tiempo = aDEVS.time_last[0]
+        for port, valores in aDEVS.my_output.items():
+            nombre_puerto = port.getPortName()
+            for valor in valores:
+                self.logger.registrar(
+                    tiempo, aDEVS.getModelFullName(),
+                    nombre_puerto, valor
+                )
+
+    def _log_input(self, aDEVS):
+        """Registra todos los mensajes recibidos en extTransition."""
+        if aDEVS.my_input is None:
+            return
+        tiempo = aDEVS.time_last[0]
+        for port, valores in aDEVS.my_input.items():
+            nombre_puerto = port.getPortName()
+            for valor in valores:
+                self.logger.registrar(
+                    tiempo, aDEVS.getModelFullName(),
+                    f"IN_{nombre_puerto}", valor
+                )
+
+    def traceInternal(self, aDEVS):
+        self._log_output(aDEVS)
+
+    def traceExternal(self, aDEVS):
+        self._log_input(aDEVS)
+
+    def traceConfluent(self, aDEVS):
+        self._log_input(aDEVS)
+        self._log_output(aDEVS)
