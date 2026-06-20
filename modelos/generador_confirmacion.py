@@ -36,7 +36,7 @@ class GeneradorConfirmacion(AtomicDEVS):
         
         else:
             
-            self._rng = random.Random() #LUEGO CAMBIAR A PROPIO RANDOM
+            self._rng = random.Random(cfg["semilla"])#LUEGO CAMBIAR A PROPIO RANDOM
             self._mu = cfg["mu"]
             self._sigma_ln = cfg["sigma_ln"]
             sigma_inicial = (

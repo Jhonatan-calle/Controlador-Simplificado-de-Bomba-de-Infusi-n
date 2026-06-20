@@ -35,7 +35,7 @@ class GeneradorOrdenes(AtomicDEVS):
         
         else:
             
-            self._rng = random.Random() #Cambiar para hacer nuestro propio Random
+            self._rng = random.Random(cfg["semilla"]) #Cambiar para hacer nuestro propio Random
             self._media_caudal    = cfg["media_caudal"]
             self._desvio_caudal   = cfg["desvio_caudal"]
             self._media_tiempo    = cfg["media_tiempo"]

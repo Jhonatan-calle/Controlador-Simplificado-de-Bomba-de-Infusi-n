@@ -211,11 +211,13 @@ ESCENARIO_6_FIN_BOLSA_ESTOCASTICO = {
     },
     "fin_bolsa": {
         "modo": "estocastico",
+        "semilla": 42,
         "media": MEDIA_FIN_BOLSA,
         "desvio_std": DESVIO_FIN_BOLSA,
     },
     "confirmacion": {
         "modo": "estocastico",
+        "semilla": 42,
         "mu": MU_CONFIRMACION,
         "sigma_ln": SIGMA_LN_CONFIRMACION,
         "max_confirmaciones": 1,
@@ -260,6 +262,7 @@ ESCENARIO_7_ALARMA_CRITICA = {
 ESCENARIO_8_ORDENES_ESTOCASTICO = {
     "ordenes": {
         "modo": "estocastico",
+        "semilla": 42,
         "media_caudal": MEDIA_CAUDAL_ORDENES,
         "desvio_caudal": DESVIO_CAUDAL_ORDENES,
         "media_tiempo": MEDIA_TIEMPO_ORDENES,
@@ -287,17 +290,20 @@ ESCENARIO_8_ORDENES_ESTOCASTICO = {
 ESCENARIO_9_ESTOCASTICO_COMPLETO = {
     "ordenes": {
         "modo": "estocastico",
+        "semilla": 42,
         "media_caudal": MEDIA_CAUDAL_ORDENES,
         "desvio_caudal": DESVIO_CAUDAL_ORDENES,
         "media_tiempo": MEDIA_TIEMPO_ORDENES,
     },
     "fin_bolsa": {
         "modo": "estocastico",
+        "semilla": 42,
         "media": MEDIA_FIN_BOLSA,
         "desvio_std": DESVIO_FIN_BOLSA,
     },
     "confirmacion": {
         "modo": "estocastico",
+        "semilla": 42,
         "mu": MU_CONFIRMACION,
         "sigma_ln": SIGMA_LN_CONFIRMACION,
         "max_confirmaciones": MAX_CONFIRMACIONES,
