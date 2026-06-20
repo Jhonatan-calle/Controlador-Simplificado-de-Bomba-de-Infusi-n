@@ -83,7 +83,6 @@ class GeneradorOrdenes(AtomicDEVS):
         if self._modo == "deterministico":
             return self._caudal_fijo
         else:
-            import random
             return max(0.0, min(200.0,
                 self._rng.gauss(self._media_caudal, self._desvio_caudal)))
  
