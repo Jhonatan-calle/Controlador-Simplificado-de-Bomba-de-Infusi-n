@@ -22,6 +22,7 @@ TIEMPO_MAX_FIN_BOLSA    = 60.0   # s — tiempo máximo tras fin de bolsa
 CAUDAL_MIN              = 0.0    # ml/h
 CAUDAL_MAX              = 200.0  # ml/h
 TIEMPO_INICIO_INFUSION  = 3.0    # s — tiempo máx para iniciar infusión tras orden
+TASA_DERIVA_SENSOR      = 0.01   # 1% del caudal por segundo desde la última corrección
 
 # =============================================================================
 # SECCIÓN 2 — Parámetros de distribuciones estocásticas
