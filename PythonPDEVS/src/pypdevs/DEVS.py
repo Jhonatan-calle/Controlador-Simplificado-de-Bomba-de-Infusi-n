@@ -214,6 +214,13 @@ class AtomicDEVS(BaseDEVS):
         self.relocatable = True
         self.last_read_time = (0, 0)
 
+    def __lt__(self, other):
+        """
+        Permitir ordenar modelos inminentes por su model_id.
+        Necesario para Classic DEVS (Python 3 no tiene default comparison).
+        """
+        return self.model_id < other.model_id
+
     def setLocation(self, location, force=False):
         """
         Sets the location of the atomic DEVS model if it was not already set
