@@ -33,7 +33,7 @@ class GeneradorFinBolsa(AtomicDEVS):
             self._rng   = random.Random(cfg["semilla"])#Cambiar para hacer nuestro propio Random
             self._media = cfg["media"]
             self._std   = cfg["desvio_std"]
-            sigma_inicial = max(0.1, self._rng.gauss(self._media, self._std))
+            sigma_inicial = round(max(0.1, self._rng.gauss(self._media, self._std)), 3)
 
         self.state = {"sigma": sigma_inicial, "emitido": False}
 

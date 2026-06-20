@@ -73,7 +73,7 @@ class GeneradorConfirmacion(AtomicDEVS):
 
     def _sample_lognormal(self) -> float:
         #Distribucion Log-Normal
-        return self._rng.lognormvariate(self._mu, self._sigma_ln)
+        return round(self._rng.lognormvariate(self._mu, self._sigma_ln), 3)
 
     def _next_sigma(self, confirmaciones_actuales: int) -> float:
         if confirmaciones_actuales >= self._max_confirmaciones:

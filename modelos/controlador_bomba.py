@@ -111,11 +111,13 @@ class ControladorBomba(AtomicDEVS):
         s = self.state
         nuevo = dict(s)
  
-        # Avanzar temporizadores
+        # tiempo acumulado en desvio 
         if s["t_desvio"] != INFINITY:
             
             nuevo["t_desvio"] = max(0.0, s["t_desvio"] - e)
         
+        # tiempo acumulado desde que se 
+        # anuncio el finde bolsa
         if s["t_bolsa"] != INFINITY:
             
             nuevo["t_bolsa"] = max(0.0, s["t_bolsa"] - e)
@@ -165,7 +167,7 @@ class ControladorBomba(AtomicDEVS):
                 # Desvío corregido: resetear temporizador y contador
                 nuevo["t_desvio"] = INFINITY
                 nuevo["contadorMedia"] = 0
-                nuevo["sigma"] = sigma_restante
+                nuevo["sigma"] = INFINITY
             
             return nuevo
  

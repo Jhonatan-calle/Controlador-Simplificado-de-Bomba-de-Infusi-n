@@ -83,11 +83,11 @@ class GeneradorOrdenes(AtomicDEVS):
         if self._modo == "deterministico":
             return self._caudal_fijo
         else:
-            return max(0.0, min(200.0,
-                self._rng.gauss(self._media_caudal, self._desvio_caudal)))
+            valor = self._rng.gauss(self._media_caudal, self._desvio_caudal)
+            return round(max(0.0, min(200.0, valor)), 3)
  
     def _next_interarribo(self):
         if self._modo == "deterministico":
             return self._interarribo_fijo
         else:
-            return max(1.0, self._rng.expovariate(1.0 / self._media_tiempo))
+            return round(max(1.0, self._rng.expovariate(1.0 / self._media_tiempo)), 3)

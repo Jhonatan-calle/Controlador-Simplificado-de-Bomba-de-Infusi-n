@@ -72,7 +72,7 @@ class SensorFlujo(AtomicDEVS):
             if self._ruido_std > 0 and t > 0
             else 0.0
         )
-        medido = max(0.0, caudal_base + deriva + ruido)
+        medido = round(max(0.0, caudal_base + deriva + ruido), 3)
 
         return {
             "caudalMedido": medido,

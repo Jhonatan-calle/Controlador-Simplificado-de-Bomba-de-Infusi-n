@@ -12,36 +12,50 @@ from pypdevs.infinity import INFINITY
 # SECCIÓN 1 — Constantes del sistema (requisitos del enunciado)
 # =============================================================================
 
-PERIODO_SENSOR          = 1.0    # s — período de muestreo del SensorFlujo
-LATENCIA_ACTUADOR       = 0.5    # s — latencia física del ActuadorBomba
-DESVIO_MAX_PERMITIDO    = 0.10   # 10 % de desvío máximo tolerado
-TIEMPO_MAX_DESVIO       = 5.0    # s — tiempo máximo con desvío antes de alarma
-TIEMPO_CONF_CRITICA     = 30.0   # s — ventana para confirmar alarma crítica
-PERIODO_REP_CRITICA     = 10.0   # s — período de repetición de alarma crítica
-TIEMPO_MAX_FIN_BOLSA    = 60.0   # s — tiempo máximo tras fin de bolsa
-CAUDAL_MIN              = 0.0    # ml/h
-CAUDAL_MAX              = 200.0  # ml/h
-TIEMPO_INICIO_INFUSION  = 3.0    # s — tiempo máx para iniciar infusión tras orden
-TASA_DERIVA_SENSOR      = 0.01   # 1% del caudal por segundo desde la última corrección
+PERIODO_SENSOR = 1.0  # s — período de muestreo del SensorFlujo
+LATENCIA_ACTUADOR = 0.5  # s — latencia física del ActuadorBomba
+DESVIO_MAX_PERMITIDO = 0.10  # 10 % de desvío máximo tolerado
+TIEMPO_MAX_DESVIO = (
+    5.0  # s — tiempo máximo con desvío antes de alarma
+)
+TIEMPO_CONF_CRITICA = (
+    30.0  # s — ventana para confirmar alarma crítica
+)
+PERIODO_REP_CRITICA = (
+    10.0  # s — período de repetición de alarma crítica
+)
+TIEMPO_MAX_FIN_BOLSA = 60.0  # s — tiempo máximo tras fin de bolsa
+CAUDAL_MIN = 0.0  # ml/h
+CAUDAL_MAX = 200.0  # ml/h
+TIEMPO_INICIO_INFUSION = (
+    3.0  # s — tiempo máx para iniciar infusión tras orden
+)
+TASA_DERIVA_SENSOR = (
+    0.02  # 2% del caudal por segundo desde la última corrección
+)
 
 # =============================================================================
 # SECCIÓN 2 — Parámetros de distribuciones estocásticas
 # =============================================================================
 
 # GeneradorFinBolsa — distribución Normal
-MEDIA_FIN_BOLSA   = 30.0   # s — tiempo esperado de agotamiento
-DESVIO_FIN_BOLSA  = 2.0    # s — desviación estándar
+MEDIA_FIN_BOLSA = 30.0  # s — tiempo esperado de agotamiento
+DESVIO_FIN_BOLSA = 2.0  # s — desviación estándar
 
 # GeneradorConfirmacion — distribución Log-Normal
-MU_CONFIRMACION       = 2.5   # parámetro mu de la Log-Normal
-SIGMA_LN_CONFIRMACION = 0.8   # parámetro sigma de la Log-Normal
-MAX_CONFIRMACIONES    = 3     # cuántas veces puede confirmar el enfermero
+MU_CONFIRMACION = 2.5  # parámetro mu de la Log-Normal
+SIGMA_LN_CONFIRMACION = 0.8  # parámetro sigma de la Log-Normal
+MAX_CONFIRMACIONES = 3  # cuántas veces puede confirmar el enfermero
 
 # Parámetros estocásticos para GeneradorOrdenes
-INTERARRIBO_ORDENES = 10.0  # s — tiempo entre órdenes médicas (determinístico)
-MEDIA_CAUDAL_ORDENES  = 100.0  # ml/h - media de la distribución Normal
-DESVIO_CAUDAL_ORDENES = 15.0   # ml/h - desvío estándar
-MEDIA_TIEMPO_ORDENES  = 10.0   # s - media de la distribución Exponencial para interarribos
+INTERARRIBO_ORDENES = (
+    20.0  # s — tiempo entre órdenes médicas (determinístico)
+)
+MEDIA_CAUDAL_ORDENES = 100.0  # ml/h - media de la distribución Normal
+DESVIO_CAUDAL_ORDENES = 15.0  # ml/h - desvío estándar
+MEDIA_TIEMPO_ORDENES = (
+    10.0  # s - media de la distribución Exponencial para interarribos
+)
 
 # =============================================================================
 # SECCIÓN 3 — Escenarios
@@ -58,18 +72,18 @@ ESCENARIO_1_NORMAL = {
     },
     "fin_bolsa": {
         "modo": "deterministico",
-        "tiempo_fijo": INFINITY,   # nunca ocurre
+        "tiempo_fijo": INFINITY,  # nunca ocurre
     },
     "confirmacion": {
         "modo": "deterministico",
-        "tiempo_fijo": INFINITY,   # no hay alarma crítica
+        "tiempo_fijo": INFINITY,  # no hay alarma crítica
         "max_confirmaciones": 0,
     },
     "actuador": {
-        "factor_falla": 1.0,       # sin falla
+        "factor_falla": 1.0,  # sin falla
     },
     "sensor": {
-        "ruido_std": 0.0,          # sin ruido
+        "ruido_std": 0.0,  # sin ruido
     },
 }
 
@@ -78,9 +92,11 @@ ESCENARIO_1_NORMAL = {
 # ---------------------------------------------------------------------------
 ESCENARIO_2_CAMBIO_ORDEN = {
     "ordenes": {
-        "modo": "deterministico",
-        "caudal_fijo": 150.0,
-        "interarribo_fijo": 5.0,
+        "modo": "estocastico",
+        "semilla": 42,
+        "media_caudal": MEDIA_CAUDAL_ORDENES,
+        "desvio_caudal": DESVIO_CAUDAL_ORDENES,
+        "media_tiempo": MEDIA_TIEMPO_ORDENES,
     },
     "fin_bolsa": {
         "modo": "deterministico",
@@ -144,7 +160,7 @@ ESCENARIO_4_DESVIO_LEVE = {
         "max_confirmaciones": 0,
     },
     "actuador": {
-        "factor_falla": 0.85,   # entrega el 85 % → desvío del 15 %, pero dura < 5 s
+        "factor_falla": 0.85,  # entrega el 85 % → desvío del 15 %, pero dura < 5 s
     },
     "sensor": {
         "ruido_std": 0.0,
@@ -166,11 +182,11 @@ ESCENARIO_5_DESVIO_GRAVE = {
     },
     "confirmacion": {
         "modo": "deterministico",
-        "tiempo_fijo": INFINITY,   # sin confirmación → escala a crítica
+        "tiempo_fijo": INFINITY,  # sin confirmación → escala a crítica
         "max_confirmaciones": 0,
     },
     "actuador": {
-        "factor_falla": 0.80,   # 20 % de desvío sostenido
+        "factor_falla": 0.80,  # 20 % de desvío sostenido
     },
     "sensor": {
         "ruido_std": 0.0,
@@ -188,11 +204,11 @@ ESCENARIO_6_FIN_BOLSA = {
     },
     "fin_bolsa": {
         "modo": "deterministico",
-        "tiempo_fijo": 30.0,    # bolsa se agota a t=30 s exacto
+        "tiempo_fijo": 30.0,  # bolsa se agota a t=30 s exacto
     },
     "confirmacion": {
         "modo": "deterministico",
-        "tiempo_fijo": 20.0,    # enfermero confirma 20 s después del evento
+        "tiempo_fijo": 20.0,  # enfermero confirma 20 s después del evento
         "max_confirmaciones": 1,
     },
     "actuador": {
@@ -238,15 +254,15 @@ ESCENARIO_7_ALARMA_CRITICA = {
     "ordenes": {
         "modo": "deterministico",
         "caudal_fijo": 100.0,
-        "interarribo_fijo": INTERARRIBO_ORDENES,
+        "interarribo_fijo": INFINITY,
     },
     "fin_bolsa": {
         "modo": "deterministico",
-        "tiempo_fijo": 30.0,
+        "tiempo_fijo": INFINITY,  # no hay fin de bolsa
     },
     "confirmacion": {
         "modo": "deterministico",
-        "tiempo_fijo": INFINITY,   # nadie confirma
+        "tiempo_fijo": INFINITY,  # nadie confirma
         "max_confirmaciones": 0,
     },
     "actuador": {
@@ -310,10 +326,10 @@ ESCENARIO_9_ESTOCASTICO_COMPLETO = {
         "max_confirmaciones": MAX_CONFIRMACIONES,
     },
     "actuador": {
-        "factor_falla": 1.0, 
+        "factor_falla": 1.0,
     },
     "sensor": {
-        "ruido_std": 0.5, # El sensor mete un poco de ruido en la lectura
+        "ruido_std": 0.5,  # El sensor mete un poco de ruido en la lectura
     },
 }
 
@@ -321,13 +337,13 @@ ESCENARIO_9_ESTOCASTICO_COMPLETO = {
 # Lista de todos los escenarios determinísticos (para parametrize en pytest)
 # ---------------------------------------------------------------------------
 TODOS_ESCENARIOS_DETERMINISTICOS = [
-    ("normal",          ESCENARIO_1_NORMAL),
-    ("cambio_orden",    ESCENARIO_2_CAMBIO_ORDEN),
-    ("orden_cero",      ESCENARIO_3_ORDEN_CERO),
-    ("desvio_leve",     ESCENARIO_4_DESVIO_LEVE),
-    ("desvio_grave",    ESCENARIO_5_DESVIO_GRAVE),
-    ("fin_bolsa",       ESCENARIO_6_FIN_BOLSA),
-    ("alarma_critica",  ESCENARIO_7_ALARMA_CRITICA),
+    ("normal", ESCENARIO_1_NORMAL),
+    ("cambio_orden", ESCENARIO_2_CAMBIO_ORDEN),
+    ("orden_cero", ESCENARIO_3_ORDEN_CERO),
+    ("desvio_leve", ESCENARIO_4_DESVIO_LEVE),
+    ("desvio_grave", ESCENARIO_5_DESVIO_GRAVE),
+    ("fin_bolsa", ESCENARIO_6_FIN_BOLSA),
+    ("alarma_critica", ESCENARIO_7_ALARMA_CRITICA),
 ]
 
 # ---------------------------------------------------------------------------
@@ -335,6 +351,6 @@ TODOS_ESCENARIOS_DETERMINISTICOS = [
 # ---------------------------------------------------------------------------
 TODOS_ESCENARIOS_ESTOCASTICOS = [
     ("fin_bolsa_estocastico", ESCENARIO_6_FIN_BOLSA_ESTOCASTICO),
-    ("ordenes_estocastico",   ESCENARIO_8_ORDENES_ESTOCASTICO),
-    ("caos_total",            ESCENARIO_9_ESTOCASTICO_COMPLETO),
+    ("ordenes_estocastico", ESCENARIO_8_ORDENES_ESTOCASTICO),
+    ("caos_total", ESCENARIO_9_ESTOCASTICO_COMPLETO),
 ]

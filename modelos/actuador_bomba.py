@@ -47,7 +47,7 @@ class ActuadorBomba(AtomicDEVS):
 
     def outputFnc(self):
         # El caudal real que llega al paciente aplica el factor de falla
-        caudal_real = self.state["caudalObjetivo"] * self._factor_falla
+        caudal_real = round(self.state["caudalObjetivo"] * self._factor_falla, 3)
         return {self.caudalActual: caudal_real}
 
     def extTransition(self, inputs):
