@@ -54,7 +54,7 @@ class ActuadorBomba(AtomicDEVS):
         """Recibe una orden y programa la actualizacion tras la latencia."""
         nuevo_estado = dict(self.state)
         
-        if self.detenerBomba in input:
+        if self.detenerBomba in inputs:
 
             nuevo_estado["caudalObjetivo"] = 0.0
             nuevo_estado["sigma"] = LATENCIA_ACTUADOR
