@@ -33,7 +33,7 @@ class SistemaBomba(CoupledDEVS):
         # Instanciar modelos atómicos
         # ----------------------------------------------------------------
         self.generador_ordenes   = self.addSubModel(GeneradorOrdenes(config))
-        self.sensor_flujo        = self.addSubModel(SensorFlujo())
+        self.sensor_flujo        = self.addSubModel(SensorFlujo(config))
         self.actuador_bomba      = self.addSubModel(ActuadorBomba(config))
         self.controlador_bomba   = self.addSubModel(ControladorBomba())
         self.modulo_alarmas      = self.addSubModel(ModuloAlarmas())

@@ -67,6 +67,9 @@ ESCENARIO_1_NORMAL = {
     "actuador": {
         "factor_falla": 1.0,       # sin falla
     },
+    "sensor": {
+        "ruido_std": 0.0,          # sin ruido
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -90,7 +93,9 @@ ESCENARIO_2_CAMBIO_ORDEN = {
     "actuador": {
         "factor_falla": 1.0,
     },
-
+    "sensor": {
+        "ruido_std": 0.0,
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -114,7 +119,9 @@ ESCENARIO_3_ORDEN_CERO = {
     "actuador": {
         "factor_falla": 1.0,
     },
-
+    "sensor": {
+        "ruido_std": 0.0,
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -138,7 +145,9 @@ ESCENARIO_4_DESVIO_LEVE = {
     "actuador": {
         "factor_falla": 0.85,   # entrega el 85 % → desvío del 15 %, pero dura < 5 s
     },
-
+    "sensor": {
+        "ruido_std": 0.0,
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -162,7 +171,9 @@ ESCENARIO_5_DESVIO_GRAVE = {
     "actuador": {
         "factor_falla": 0.80,   # 20 % de desvío sostenido
     },
-
+    "sensor": {
+        "ruido_std": 0.0,
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -186,7 +197,9 @@ ESCENARIO_6_FIN_BOLSA = {
     "actuador": {
         "factor_falla": 1.0,
     },
-
+    "sensor": {
+        "ruido_std": 0.0,
+    },
 }
 
 # Versión estocástica del mismo escenario (para comparación)
@@ -212,7 +225,9 @@ ESCENARIO_6_FIN_BOLSA_ESTOCASTICO = {
     "actuador": {
         "factor_falla": 1.0,
     },
-
+    "sensor": {
+        "ruido_std": 0.5,
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -236,7 +251,9 @@ ESCENARIO_7_ALARMA_CRITICA = {
     "actuador": {
         "factor_falla": 1.0,
     },
-
+    "sensor": {
+        "ruido_std": 0.0,
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -262,7 +279,9 @@ ESCENARIO_8_ORDENES_ESTOCASTICO = {
     "actuador": {
         "factor_falla": 1.0,
     },
-
+    "sensor": {
+        "ruido_std": 0.0,
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -292,7 +311,9 @@ ESCENARIO_9_ESTOCASTICO_COMPLETO = {
     "actuador": {
         "factor_falla": 1.0, 
     },
-
+    "sensor": {
+        "ruido_std": 0.5, # El sensor mete un poco de ruido en la lectura
+    },
 }
 
 # ---------------------------------------------------------------------------
