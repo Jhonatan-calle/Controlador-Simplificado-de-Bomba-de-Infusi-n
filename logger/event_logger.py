@@ -61,10 +61,12 @@ class TracerEventLogger:
     Se conecta usando sim.setCustomTracer().
     """
 
-    def __init__(self, uid, server, event_logger, *args):
+    def __init__(self, uid, server, event_logger, verbose=False):
         self.uid = uid
         self.server = server
         self.logger = event_logger
+        self.verbose = verbose
+        self._ultimo_tiempo = -1.0
 
     def startTracer(self, recover):
         pass
@@ -72,37 +74,46 @@ class TracerEventLogger:
     def stopTracer(self):
         pass
 
+    def _separador(self, tiempo):
+        if self.verbose and tiempo != self._ultimo_tiempo:
+            print(f"\n{'-'*55}")
+            print(f"  t = {tiempo:.2f} s")
+            print(f"{'-'*55}")
+            self._ultimo_tiempo = tiempo
+
     def traceInit(self, aDEVS, t):
-        self.logger.registrar(
-            float(t[0]), aDEVS.getModelFullName(),
-            "STATE_INIT", dict(aDEVS.state) if aDEVS.state else None
-        )
+        tiempo = float(t[0])
+        modelo = aDEVS.getModelFullName()
+        estado = dict(aDEVS.state) if aDEVS.state else None
+        self.logger.registrar(tiempo, modelo, "STATE_INIT", estado)
+        if self.verbose:
+            print(f"  [INIT] {modelo} → {estado}")
 
     def _log_output(self, aDEVS):
-        """Registra todos los mensajes emitidos por outputFnc."""
         if aDEVS.my_output is None:
             return
         tiempo = aDEVS.time_last[0]
+        modelo = aDEVS.getModelFullName()
+        self._separador(tiempo)
         for port, valores in aDEVS.my_output.items():
             nombre_puerto = port.getPortName()
             for valor in valores:
-                self.logger.registrar(
-                    tiempo, aDEVS.getModelFullName(),
-                    nombre_puerto, valor
-                )
+                self.logger.registrar(tiempo, modelo, nombre_puerto, valor)
+                if self.verbose:
+                    print(f"  [{modelo}] → {nombre_puerto} = {valor}")
 
     def _log_input(self, aDEVS):
-        """Registra todos los mensajes recibidos en extTransition."""
         if aDEVS.my_input is None:
             return
         tiempo = aDEVS.time_last[0]
+        modelo = aDEVS.getModelFullName()
+        self._separador(tiempo)
         for port, valores in aDEVS.my_input.items():
             nombre_puerto = port.getPortName()
             for valor in valores:
-                self.logger.registrar(
-                    tiempo, aDEVS.getModelFullName(),
-                    f"IN_{nombre_puerto}", valor
-                )
+                self.logger.registrar(tiempo, modelo, f"IN_{nombre_puerto}", valor)
+                if self.verbose:
+                    print(f"  [{modelo}] ← {nombre_puerto} = {valor}")
 
     def traceInternal(self, aDEVS):
         self._log_output(aDEVS)

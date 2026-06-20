@@ -54,30 +54,37 @@ NOMBRES = {
 
 
 def correr_simulacion(num_escenario: int = 1, tiempo: float = 100.0,
-                      verbose: bool = True):
+                      verbose: bool = False, verificar: bool = False):
     config = ESCENARIOS[num_escenario]
     nombre = NOMBRES[num_escenario]
 
     print(f"\n{'='*60}")
     print(f"  Escenario {num_escenario}: {nombre}")
     print(f"  Duración: {tiempo} s")
+    print(f"  {'[verbose] ' if verbose else ''}{'[verificar] ' if verificar else ''}")
     print(f"{'='*60}\n")
 
     logger = EventLogger()
     modelo = SistemaBomba(config)
     sim    = Simulator(modelo)
-    sim.setCustomTracer("logger.event_logger", "TracerEventLogger", [logger])
+    sim.setCustomTracer("logger.event_logger", "TracerEventLogger", [logger, verbose])
     sim.setClassicDEVS()
     sim.setTerminationTime(tiempo)
     sim.simulate()
 
-    v = VerificadorPropiedades(logger, config)
-    for r in v.verificar_todo():
-        print(f"[{'✓' if r.cumplida else '✗'}] {r.propiedad} — {r.detalle}")
+    print(f"  Eventos capturados: {len(logger.todos())}")
+
+    if verificar:
+        v = VerificadorPropiedades(logger, config)
+        print(f"\n{'─'*60}")
+        print("  Verificación de propiedades")
+        print(f"{'─'*60}")
+        for r in v.verificar_todo():
+            icon = "✓" if r.cumplida else "✗"
+            print(f"  [{icon}] {r.propiedad} — {r.detalle}")
 
     print(f"\n{'='*60}")
     print("  Simulación completada")
-    print(f"  Eventos capturados: {len(logger.todos())}")
     print(f"{'='*60}\n")
 
 
@@ -88,6 +95,11 @@ if __name__ == "__main__":
                         help=f"Número de escenario (1-{max(ESCENARIOS)})")
     parser.add_argument("--tiempo", type=float, default=100.0,
                         help="Duración de la simulación en segundos")
+    parser.add_argument("--verbose", action="store_true",
+                        help="Muestra eventos en tiempo real")
+    parser.add_argument("--verificar", action="store_true",
+                        help="Verifica propiedades al finalizar")
     args = parser.parse_args()
 
-    correr_simulacion(args.escenario, args.tiempo)
+    correr_simulacion(args.escenario, args.tiempo,
+                      verbose=args.verbose, verificar=args.verificar)
