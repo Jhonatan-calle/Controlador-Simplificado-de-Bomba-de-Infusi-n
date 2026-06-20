@@ -751,12 +751,12 @@ class RootDEVS(BaseDEVS):
         """
         if isinstance(scheduler_type, tuple):
             try:
-                exec("from pypdevs.schedulers.%s import %s" % scheduler_type)
-            except:
-                exec("from %s import %s" % scheduler_type)
+                mod = __import__("pypdevs.schedulers.%s" % scheduler_type[0], fromlist=[scheduler_type[1]])
+            except ImportError:
+                mod = __import__("%s" % scheduler_type[0], fromlist=[scheduler_type[1]])
+            scheduler_class = getattr(mod, scheduler_type[1])
             nr_models = len(self.models)
-            self.scheduler = eval("%s(self.component_set, EPSILON, nr_models)"
-                                  % scheduler_type[1])
+            self.scheduler = scheduler_class(self.component_set, EPSILON, nr_models)
         else:
             raise DEVSException("Unknown Scheduler: " + str(scheduler_type))
 

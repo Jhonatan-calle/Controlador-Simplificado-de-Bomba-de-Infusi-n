@@ -215,7 +215,7 @@ class Simulator(object):
                         transitioning[inport.host_DEVS] |= 2
 
             # Perform transitions
-            for aDEVS, ttype in transitioning.iteritems():
+            for aDEVS, ttype in transitioning.items():
                 if ttype == 1:
                     aDEVS.state = aDEVS.intTransition()
                 elif ttype == 2:

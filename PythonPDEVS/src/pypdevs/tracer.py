@@ -34,12 +34,11 @@ class Tracers(object):
         :param recover: whether or not this is a recovered registration (used during checkpointing)
         """
         try:
-            exec("from pypdevs.tracers.%s import %s" % tracer[0:2])
-        except:
-            exec("from %s import %s" % tracer[0:2])
-        self.tracers.append(eval("%s(%i, server, *%s)" % (tracer[1], 
-                                                          self.uid, 
-                                                          tracer[2])))
+            module = __import__("pypdevs.tracers.%s" % tracer[0], fromlist=[tracer[1]])
+        except ImportError:
+            module = __import__("%s" % tracer[0], fromlist=[tracer[1]])
+        tracer_class = getattr(module, tracer[1])
+        self.tracers.append(tracer_class(self.uid, server, *tracer[2]))
         self.tracers_init.append(tracer)
         self.uid += 1
         self.tracers[-1].startTracer(recover)

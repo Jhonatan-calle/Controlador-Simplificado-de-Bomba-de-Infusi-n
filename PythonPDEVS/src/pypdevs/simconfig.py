@@ -674,10 +674,11 @@ class SimulatorConfiguration(object):
         :param args: all other args are passed to the constructor
         """
         try:
-            exec("from pypdevs.relocators.%s import %s" % (filename, classname))
-        except:
-            exec("from %s import %s" % (filename, classname))
-        self.simulator.activity_relocator = eval("%s(*args)" % classname)
+            mod = __import__("pypdevs.relocators.%s" % filename, fromlist=[classname])
+        except ImportError:
+            mod = __import__("%s" % filename, fromlist=[classname])
+        relocator_class = getattr(mod, classname)
+        self.simulator.activity_relocator = relocator_class(*args)
 
     def setActivityRelocatorBasicBoundary(self, swappiness):
         """
