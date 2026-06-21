@@ -289,6 +289,3 @@ def _sigma_min(t_desvio: float, t_bolsa: float) -> float:
     """Devuelve el mínimo de los timers activos (ignora INFINITY)."""
     candidatos = [t for t in (t_desvio, t_bolsa) if t != INFINITY and t >= 0.0]
     return min(candidatos) if candidatos else INFINITY
-
-def _clamp_caudal(valor: float) -> float:
-    return max(0.0, min(CAUDAL_MAX, valor))
