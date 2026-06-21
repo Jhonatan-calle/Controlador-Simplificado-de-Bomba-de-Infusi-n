@@ -22,9 +22,7 @@ INFUNDIENDO   = "INFUNDIENDO"
 ALERTA_BOLSA  = "ALERTA_BOLSA"
 ALARMA_MEDIA  = "ALARMA_MEDIA"
 ALARMA_CRITICA = "ALARMA_CRITICA"
-
-def _clamp_caudal(valor: float) -> float:
-    return max(0.0, min(CAUDAL_MAX, valor))
+PARADA_POR_BOLSA = "PARADA_POR_BOLSA"  #Fase Para Gestionar la Detencion De Fin De Bolsa
 
 
 class ControladorBomba(AtomicDEVS):
@@ -97,6 +95,11 @@ class ControladorBomba(AtomicDEVS):
             salidas[self.alarma]          = "critica"
             salidas[self.detenerBomba]    = True
             salidas[self.registrarEvento] = "Alarma CRITICA — bomba detenida"
+
+        elif s["fase"] == PARADA_POR_BOLSA:
+
+            salidas[self.detenerBomba]    = True
+            salidas[self.registrarEvento] = f"Tiempo limite tras fin de bolsa ({TIEMPO_MAX_FIN_BOLSA}s) - bomba detenida"
  
         elif s["fase"] == OCIOSO and s["caudalObjetivo"] == 0.0:
             
@@ -160,14 +163,14 @@ class ControladorBomba(AtomicDEVS):
                     nuevo["t_desvio"] = TIEMPO_MAX_DESVIO
                 
                 # Si ya estaba corriendo, continúa sin reiniciarse
-                nuevo["sigma"] = min(sigma_restante, nuevo["t_desvio"])
+                nuevo["sigma"] = _sigma_min(nuevo["t_desvio"], nuevo["t_bolsa"])
             
             else:
                 
                 # Desvío corregido: resetear temporizador y contador
                 nuevo["t_desvio"] = INFINITY
                 nuevo["contadorMedia"] = 0
-                nuevo["sigma"] = INFINITY
+                nuevo["sigma"] = _sigma_min(nuevo["t_desvio"], nuevo["t_bolsa"])
             
             return nuevo
  
@@ -204,20 +207,28 @@ class ControladorBomba(AtomicDEVS):
         
         s = self.state
         nuevo = dict(s)
+
+        if nuevo["t_bolsa"] != INFINITY:
+            
+            nuevo["t_bolsa"] = max(0.0, nuevo["t_bolsa"] - s["sigma"])
+        
+        if nuevo["t_desvio"] != INFINITY:
+            
+            nuevo["t_desvio"] = max(0.0, nuevo["t_desvio"] - s["sigma"])
  
         """MAXIMA PRIORIDAD"""
 
         # 1. Timeout de fin de bolsa → detener todo
-        if s["t_bolsa"] != INFINITY and s["t_bolsa"] <= 0.0:
+        if nuevo["t_bolsa"] != INFINITY and nuevo["t_bolsa"] <= 0.0:
             
             nuevo["caudalObjetivo"] = 0.0
-            nuevo["fase"]          = OCIOSO
+            nuevo["fase"]          = PARADA_POR_BOLSA
             nuevo["t_bolsa"]       = INFINITY
             nuevo["sigma"]         = 0.0
             return nuevo
 
         # 2. Timeout de desvío → escalar alarma
-        if s["t_desvio"] != INFINITY and s["t_desvio"] <= 0.0:
+        if nuevo["t_desvio"] != INFINITY and nuevo["t_desvio"] <= 0.0:
             
             if s["contadorMedia"] < 2:
                 
@@ -235,31 +246,44 @@ class ControladorBomba(AtomicDEVS):
             
             return nuevo
  
-        # 3. Tras emitir ALARMA_MEDIA → volver a INFUNDIENDO
+        # 3. Tras emitir PARADA_POR_BOLSA → volver a OCIOSO
+        if s["fase"] == PARADA_POR_BOLSA:
+
+            nuevo["fase"] = OCIOSO
+            nuevo["sigma"] = INFINITY
+            return nuevo 
+
+        # 4. Tras emitir ALARMA_MEDIA → volver a INFUNDIENDO
         if s["fase"] == ALARMA_MEDIA:
             
             nuevo["fase"]  = INFUNDIENDO
             nuevo["sigma"] = _sigma_min(nuevo["t_desvio"], nuevo["t_bolsa"])
             return nuevo
  
-        # 4. Tras emitir ALERTA_BOLSA → seguir en INFUNDIENDO con timer bolsa activo
+        # 5. Tras emitir ALERTA_BOLSA → seguir en INFUNDIENDO con timer bolsa activo
         if s["fase"] == ALERTA_BOLSA:
             
             nuevo["fase"]  = INFUNDIENDO
             nuevo["sigma"] = _sigma_min(nuevo["t_desvio"], nuevo["t_bolsa"])
             return nuevo
  
-        # 5. Tras emitir en INFUNDIENDO (ajustar caudal al inicio)
+        # 6. Tras emitir en INFUNDIENDO (ajustar caudal al inicio)
         if s["fase"] == INFUNDIENDO:
             
             nuevo["sigma"] = _sigma_min(nuevo["t_desvio"], nuevo["t_bolsa"])
             return nuevo
  
-        # 6. ALARMA_CRITICA o OCIOSO sin timers → pasivo
+        # 7. ALARMA_CRITICA o OCIOSO sin timers → pasivo
         nuevo["sigma"] = INFINITY
         return nuevo
 
+##########################################################################################
+
 def _sigma_min(t_desvio: float, t_bolsa: float) -> float:
     """Devuelve el mínimo de los timers activos (ignora INFINITY)."""
-    candidatos = [t for t in (t_desvio, t_bolsa) if t != INFINITY and t > 0]
+    candidatos = [t for t in (t_desvio, t_bolsa) if t != INFINITY and t >= 0.0]
     return min(candidatos) if candidatos else INFINITY
+
+def _clamp_caudal(valor: float) -> float:
+    return max(0.0, min(CAUDAL_MAX, valor))
+
