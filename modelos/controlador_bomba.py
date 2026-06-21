@@ -172,7 +172,7 @@ class ControladorBomba(AtomicDEVS):
                 
                 else:
                     # Si ya estaba corriendo, continúa sin reiniciarse
-                    nuevo["sigma"] = _sigma_min(nuevo["t_desvio"], nuevo["t_bolsa"])
+                    nuevo["sigma"] = min(sigma_restante, _sigma_min(nuevo["t_desvio"], nuevo["t_bolsa"]))
             
             else:
                 
