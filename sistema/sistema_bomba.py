@@ -35,7 +35,9 @@ class SistemaBomba(CoupledDEVS):
         self.generador_ordenes   = self.addSubModel(GeneradorOrdenes(config))
         self.sensor_flujo        = self.addSubModel(SensorFlujo(config))
         self.actuador_bomba      = self.addSubModel(ActuadorBomba(config))
-        self.controlador_bomba   = self.addSubModel(ControladorBomba())
+        self.controlador_bomba   = self.addSubModel(
+            ControladorBomba(violar_seguridad=config.get("violar_seguridad", False))
+        )
         self.modulo_alarmas      = self.addSubModel(ModuloAlarmas())
         self.generador_confirm   = self.addSubModel(GeneradorConfirmacion(config))
         self.generador_fin_bolsa = self.addSubModel(GeneradorFinBolsa(config))

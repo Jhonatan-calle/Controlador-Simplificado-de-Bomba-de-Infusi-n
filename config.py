@@ -194,6 +194,33 @@ ESCENARIO_5_DESVIO_GRAVE = {
 }
 
 # ---------------------------------------------------------------------------
+# ESCENARIO 9 — Violación deliberada de seguridad
+# ---------------------------------------------------------------------------
+ESCENARIO_9_VIOLACION = {
+    "ordenes": {
+        "modo": "deterministico",
+        "caudal_fijo": 100.0,
+        "interarribo_fijo": INTERARRIBO_ORDENES,
+    },
+    "fin_bolsa": {
+        "modo": "deterministico",
+        "tiempo_fijo": INFINITY,
+    },
+    "confirmacion": {
+        "modo": "deterministico",
+        "tiempo_fijo": INFINITY,
+        "max_confirmaciones": 0,
+    },
+    "actuador": {
+        "factor_falla": 0.80,
+    },
+    "sensor": {
+        "ruido_std": 0.0,
+    },
+    "violar_seguridad": True,
+}
+
+# ---------------------------------------------------------------------------
 # ESCENARIO 6 — Fin de bolsa (determinístico)
 # ---------------------------------------------------------------------------
 ESCENARIO_6_FIN_BOLSA = {

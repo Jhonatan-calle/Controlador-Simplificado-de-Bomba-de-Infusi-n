@@ -45,8 +45,10 @@ class ControladorBomba(AtomicDEVS):
         registrarEvento — str (log de auditoría)
     """
 
-    def __init__(self, name: str = "ControladorBomba"):
+    def __init__(self, violar_seguridad: bool = False,
+                 name: str = "ControladorBomba"):
         super().__init__(name)
+        self._violar = violar_seguridad
  
         # Puertos de Entrada
         self.ordenMedica = self.addInPort("ordenMedica")
@@ -151,9 +153,11 @@ class ControladorBomba(AtomicDEVS):
         # --- Lectura del sensor ---
         if self.sensorFlujo in inputs:
             if s["fase"] in (OCIOSO, ALARMA_CRITICA):
-
-                nuevo["sigma"] = sigma_restante
-                return nuevo
+                if not self._violar:
+                    nuevo["sigma"] = sigma_restante
+                    return nuevo
+                # Violación: ignorar la crítica y reanudar control
+                nuevo["fase"] = INFUNDIENDO
 
             caudal_leido = inputs[self.sensorFlujo]
             nuevo["caudalReal"] = caudal_leido
