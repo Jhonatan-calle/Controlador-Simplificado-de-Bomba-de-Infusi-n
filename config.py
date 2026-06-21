@@ -174,11 +174,11 @@ ESCENARIO_5_DESVIO_GRAVE = {
     "ordenes": {
         "modo": "deterministico",
         "caudal_fijo": 100.0,
-        "interarribo_fijo": INTERARRIBO_ORDENES,
+        "interarribo_fijo": INTERARRIBO_ORDENES, #20
     },
     "fin_bolsa": {
         "modo": "deterministico",
-        "tiempo_fijo": INFINITY,
+        "tiempo_fijo": INFINITY, #nunca
     },
     "confirmacion": {
         "modo": "deterministico",

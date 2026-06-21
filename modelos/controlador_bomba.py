@@ -132,7 +132,7 @@ class ControladorBomba(AtomicDEVS):
                 
                 nuevo["caudalObjetivo"] = _clamp_caudal(valor)
                 nuevo["fase"] = INFUNDIENDO
-                nuevo["sigma"] = 0.0           # emitir ajustarCaudal inmediatamente
+                nuevo["sigma"] = 2.0           # demora de 2s antes de emitir ajustarCaudal
             
             else:
                 
@@ -144,7 +144,11 @@ class ControladorBomba(AtomicDEVS):
  
         # --- Lectura del sensor ---
         if self.sensorFlujo in inputs:
-            
+            if s["fase"] in (OCIOSO, ALARMA_CRITICA):
+
+                nuevo["sigma"] = sigma_restante
+                return nuevo
+
             caudal_leido = inputs[self.sensorFlujo]
             nuevo["caudalReal"] = caudal_leido
  
@@ -156,18 +160,20 @@ class ControladorBomba(AtomicDEVS):
                 # Desvío detectado
                 if s["t_desvio"] == INFINITY:
                     
-                    # Iniciar temporizador de desvío
+                    # Iniciar temporizador de desvío y emitir ajuste inmediato
                     nuevo["t_desvio"] = TIEMPO_MAX_DESVIO
+                    nuevo["sigma"] = 0.0
                 
-                # Si ya estaba corriendo, continúa sin reiniciarse
-                nuevo["sigma"] = min(sigma_restante, nuevo["t_desvio"])
+                else:
+                    # Si ya estaba corriendo, continúa sin reiniciarse
+                    nuevo["sigma"] = min(sigma_restante, nuevo["t_desvio"])
             
             else:
                 
                 # Desvío corregido: resetear temporizador y contador
                 nuevo["t_desvio"] = INFINITY
                 nuevo["contadorMedia"] = 0
-                nuevo["sigma"] = INFINITY
+                nuevo["sigma"] = sigma_restante
             
             return nuevo
  
@@ -204,20 +210,16 @@ class ControladorBomba(AtomicDEVS):
         
         s = self.state
         nuevo = dict(s)
- 
-        """MAXIMA PRIORIDAD"""
 
-        # 1. Timeout de fin de bolsa → detener todo
-        if s["t_bolsa"] != INFINITY and s["t_bolsa"] <= 0.0:
-            
-            nuevo["caudalObjetivo"] = 0.0
-            nuevo["fase"]          = OCIOSO
-            nuevo["t_bolsa"]       = INFINITY
-            nuevo["sigma"]         = 0.0
-            return nuevo
+        # Decrementar timers por el sigma que recién expiró
+        transcurrido = s["sigma"]
+        if s["t_desvio"] != INFINITY:
+            nuevo["t_desvio"] = max(0.0, s["t_desvio"] - transcurrido)
+        if s["t_bolsa"] != INFINITY:
+            nuevo["t_bolsa"] = max(0.0, s["t_bolsa"] - transcurrido)
 
-        # 2. Timeout de desvío → escalar alarma
-        if s["t_desvio"] != INFINITY and s["t_desvio"] <= 0.0:
+        # 1. Timeout de desvío → escalar alarma
+        if nuevo["t_desvio"] != INFINITY and nuevo["t_desvio"] <= 0.0:
             
             if s["contadorMedia"] < 2:
                 
@@ -233,6 +235,15 @@ class ControladorBomba(AtomicDEVS):
                 nuevo["t_desvio"]      = INFINITY
                 nuevo["sigma"]         = 0.0
             
+            return nuevo
+
+        # 2. Timeout de fin de bolsa → detener todo
+        if s["t_bolsa"] != INFINITY and s["t_bolsa"] <= 0.0:
+            
+            nuevo["caudalObjetivo"] = 0.0
+            nuevo["fase"]          = OCIOSO
+            nuevo["t_bolsa"]       = INFINITY
+            nuevo["sigma"]         = 0.0
             return nuevo
  
         # 3. Tras emitir ALARMA_MEDIA → volver a INFUNDIENDO

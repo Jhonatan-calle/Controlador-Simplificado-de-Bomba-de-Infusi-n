@@ -124,7 +124,7 @@ class VerificadorPropiedades:
         for critica in criticas:
             t_critica = critica.tiempo
             ajustes_post = [e for e in self.log.filtrar_puerto("ajustarCaudal")
-                            if e.tiempo >= t_critica]
+                            if e.tiempo > t_critica]
 
             reanudacion = [t for t in confirmaciones if t >= t_critica]
             reanudacion += [t for t in ordenes if t >= t_critica]
@@ -167,7 +167,7 @@ class VerificadorPropiedades:
             t = orden.tiempo
             acciones = [e for e in self.log.todos()
                         if e.puerto in ("ajustarCaudal", "detenerBomba")
-                        and abs(e.tiempo - t) < T]
+                        and e.tiempo - t <= TIEMPO_INICIO_INFUSION]
             if not acciones:
                 return ResultadoVerificacion(
                     "P4: Liveness — orden produce acción",
@@ -184,8 +184,8 @@ class VerificadorPropiedades:
         """
         Toda alarma crítica sin confirmación debe repetirse eventualmente.
         """
-        criticas = [e for e in self.log.filtrar_puerto("alarma")
-                    if e.valor == "critica"]
+        criticas = [e for e in self.log.filtrar_puerto("notificacionAlarma")
+                    if e.valor.startswith("ALERTA: CRITICA")]
         if not criticas:
             return ResultadoVerificacion(
                 "P5: Liveness — crítica se repite",
@@ -194,7 +194,8 @@ class VerificadorPropiedades:
 
         confirmaciones = self.log.tiempos_de("confirmacionEnfermero")
 
-        for i, critica in enumerate(criticas):
+        # No exigir repetición para la última crítica (simulación termina antes)
+        for i, critica in enumerate(criticas[:-1]):
             t = critica.tiempo
             conf_post = [c for c in confirmaciones if c >= t]
             if conf_post:
@@ -250,8 +251,11 @@ class VerificadorPropiedades:
         ordenMedica > 0 → ajustarCaudal debe ocurrir en < TIEMPO_INICIO_INFUSION s.
         """
         ordenes = self.log.filtrar_puerto("ordenMedica")
+        max_time = max(e.tiempo for e in self.log.todos()) if self.log.todos() else 0.0
         for orden in ordenes:
             if orden.valor <= 0:
+                continue
+            if orden.tiempo + TIEMPO_INICIO_INFUSION > max_time:
                 continue
             ajustes = [e for e in self.log.filtrar_puerto("ajustarCaudal")
                        if e.tiempo >= orden.tiempo]

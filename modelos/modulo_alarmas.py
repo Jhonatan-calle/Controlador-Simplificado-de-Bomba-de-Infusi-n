@@ -78,8 +78,8 @@ class ModuloAlarmas(AtomicDEVS):
                 "critica": CRITICA,
             }.get(valor, NINGUNA)
 
-        # Si ya estamos en CRITICA y llega algo menor, lo ignoramos.
-        if tipo == CRITICA and tipo_nuevo in (BAJA, MEDIA):
+        # Si ya estamos en CRITICA, ignoramos cualquier alarma entrante
+        if tipo == CRITICA:
             return dict(self.state) | {"sigma": sigma}
         
         # Si ya estamos en MEDIA y llega una BAJA, lo ignoramos.
