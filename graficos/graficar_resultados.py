@@ -7,6 +7,7 @@ Genera gráficos a partir del EventLogger de una simulación:
 """
 
 import os
+import warnings
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from logger.event_logger import EventLogger
@@ -131,8 +132,11 @@ def _graficar_timeline(ax, logger, tiempo_max):
             continue
 
         fila, color, marker, _ = filas[tipo]
-        ax.scatter(tiempo, fila, marker=marker, color=color,
-                   s=60, zorder=5, edgecolors="black", linewidths=0.3)
+        kwargs = dict(s=60, zorder=5)
+        if marker != "x":
+            kwargs["edgecolors"] = "black"
+            kwargs["linewidths"] = 0.3
+        ax.scatter(tiempo, fila, marker=marker, color=color, **kwargs)
 
     # Ejes
     ax.set_xlim(0, tiempo_max)
@@ -260,6 +264,8 @@ def graficar_escenario(logger, num_escenario, nombre, tiempo_sim,
     print(f"  [graficos] Guardado: {ruta}")
 
     if mostrar:
-        plt.show()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            plt.show()
     else:
         plt.close(fig)
