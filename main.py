@@ -79,18 +79,22 @@ def correr_simulacion(num_escenario: int = 1, tiempo: float = 100.0,
 
     print(f"  Eventos capturados: {len(logger.todos())}")
 
-    if verificar:
+    resultados = None
+    if verificar or graficos:
         v = VerificadorPropiedades(logger, config)
-        print(f"\n{'─'*60}")
-        print("  Verificación de propiedades")
-        print(f"{'─'*60}")
-        for r in v.verificar_todo():
-            icon = "✓" if r.cumplida else "✗"
-            print(f"  [{icon}] {r.propiedad} — {r.detalle}")
+        resultados = v.verificar_todo()
+        if verificar:
+            print(f"\n{'─'*60}")
+            print("  Verificación de propiedades")
+            print(f"{'─'*60}")
+            for r in resultados:
+                icon = "✓" if r.cumplida else "✗"
+                print(f"  [{icon}] {r.propiedad} — {r.detalle}")
 
     if graficos:
         from graficos.graficar_resultados import graficar_escenario
-        graficar_escenario(logger, num_escenario, nombre, tiempo)
+        graficar_escenario(logger, num_escenario, nombre, tiempo,
+                           config=config, resultados=resultados)
 
     print(f"\n{'='*60}")
     print("  Simulación completada")

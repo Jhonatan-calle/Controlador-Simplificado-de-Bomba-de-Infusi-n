@@ -146,20 +146,85 @@ def _graficar_timeline(ax, logger, tiempo_max):
 
 
 # ---------------------------------------------------------------------------
+# Descripción textual del escenario
+# ---------------------------------------------------------------------------
+
+def _describir_escenario(config, resultados=None):
+    lineas = []
+    act = config.get("actuador", {})
+    sns = config.get("sensor", {})
+    ord = config.get("ordenes", {})
+    fin = config.get("fin_bolsa", {})
+    con = config.get("confirmacion", {})
+
+    if act.get("factor_falla", 1.0) < 1.0:
+        pct = (1 - act["factor_falla"]) * 100
+        lineas.append(f"Actuador: {pct:.0f}% de desvío permanente")
+    else:
+        lineas.append("Actuador: sin falla")
+
+    if sns.get("ruido_std", 0) > 0:
+        lineas.append(f"Sensor: ruido gaussiano σ={sns['ruido_std']}")
+    else:
+        lineas.append("Sensor: sin ruido")
+
+    if ord.get("modo") == "deterministico":
+        if ord.get("caudal_fijo", 100) == 0:
+            lineas.append("Órdenes: caudal=0 (detención programada)")
+        else:
+            gap = ord.get("interarribo_fijo", "?")
+            lineas.append(f"Órdenes determinísticas cada {gap}s")
+    elif ord.get("modo") == "estocastico":
+        lineas.append("Órdenes estocásticas")
+
+    if fin.get("tiempo_fijo", float("inf")) != float("inf"):
+        lineas.append(f"Fin de bolsa en t={fin['tiempo_fijo']}s")
+    elif fin.get("modo") == "estocastico":
+        lineas.append("Fin de bolsa estocástico")
+
+    if con.get("tiempo_fijo", float("inf")) != float("inf"):
+        lineas.append(f"Confirmación en t={con['tiempo_fijo']}s")
+    elif con.get("modo") == "estocastico":
+        lineas.append("Confirmación estocástica")
+    elif con.get("max_confirmaciones", 0) == 0:
+        lineas.append("Sin confirmación")
+
+    if config.get("violar_seguridad"):
+        lineas.append("⚠ VIOLACIÓN: se ignoran alarmas críticas")
+
+    texto = " | ".join(lineas)
+
+    if resultados:
+        fallos = [r for r in resultados if not r.cumplida]
+        aciertos = [r for r in resultados if r.cumplida]
+        if fallos:
+            detalle = "; ".join(f"{r.propiedad}: {r.detalle}" for r in fallos)
+            texto += f"\n✗ Violaciones ({len(fallos)}): {detalle}"
+            texto += f" | ✓ {len(aciertos)} propiedades cumplidas"
+        else:
+            texto += f"\n✓ Verificación: {len(resultados)}/10 propiedades cumplidas"
+
+    return texto
+
+
+# ---------------------------------------------------------------------------
 # Función pública
 # ---------------------------------------------------------------------------
 
 def graficar_escenario(logger, num_escenario, nombre, tiempo_sim,
+                       config=None, resultados=None,
                        dir_salida="graficos", mostrar=True):
     """
-    Genera figura con 2 subplots (caudal + timeline) y la guarda en
-    ``dir_salida/escenario_{num}_{slug}.png``.
+    Genera figura con 2 subplots (caudal + timeline) + descripción textual
+    y la guarda en ``dir_salida/escenario_{num}_{slug}.png``.
 
     Parámetros:
         logger — EventLogger con los datos de la simulación
         num_escenario — int, número de escenario
         nombre — str, nombre descriptivo del escenario
         tiempo_sim — float, duración de la simulación
+        config — dict, configuración del escenario (para la descripción)
+        resultados — list[ResultadoVerificacion], resultados de verificación
         dir_salida — str, directorio donde guardar PNGs
         mostrar — bool, si además mostrar la figura en pantalla
     """
@@ -177,7 +242,15 @@ def graficar_escenario(logger, num_escenario, nombre, tiempo_sim,
     _graficar_caudal(ax1, logger, tiempo_sim)
     _graficar_timeline(ax2, logger, tiempo_sim)
 
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    # Texto descriptivo al pie de la figura
+    if config:
+        desc = _describir_escenario(config, resultados)
+        fig.text(0.5, 0.005, desc, ha="center", va="bottom",
+                 fontsize=7, family="monospace",
+                 bbox=dict(boxstyle="round,pad=0.4",
+                           facecolor="lightyellow", alpha=0.85))
+
+    plt.tight_layout(rect=[0, 0.06, 1, 0.96])
 
     # Guardar PNG
     os.makedirs(dir_salida, exist_ok=True)
