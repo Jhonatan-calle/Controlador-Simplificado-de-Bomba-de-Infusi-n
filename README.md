@@ -12,7 +12,7 @@ Simulador de eventos discretos basado en el formalismo **DEVS** (Discrete Event 
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/Jhonatan-calle/Controlador-Simplificado-de-Bomba-de-Infusi-n.git
+git clone https://github.com/Jhonatan-calle/Controlador-Simplificado-de-Bomba-de-Infusi-n.git proyecto
 cd proyecto
 
 # 2. Crear y activar el entorno virtual
