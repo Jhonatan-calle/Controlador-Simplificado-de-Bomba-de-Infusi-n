@@ -81,6 +81,7 @@ python main.py --escenario 5
 | 6  | Fin de bolsa (determinístico)  | Fin de bolsa en tiempo fijo                |
 | 7  | Alarma crítica sin confirmación| Alarma crítica que se repite cada 10s      |
 | 8  | Fin de bolsa (estocástico)     | Fin de bolsa con tiempo aleatorio          |
+| 9  | Violación deliberada           | Desvío grave ignorando alarma crítica      |
 
 ### Flags
 

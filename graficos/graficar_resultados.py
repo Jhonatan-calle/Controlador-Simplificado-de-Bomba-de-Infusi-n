@@ -24,6 +24,7 @@ def _sanitizar(nombre: str) -> str:
     replacements = {
         "á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u",
         "ñ": "n", " ": "_", "(": "", ")": "", "ˇ": "",
+        ">": "_gt_", "<": "_lt_",
     }
     for old, new in replacements.items():
         nombre = nombre.replace(old, new)
