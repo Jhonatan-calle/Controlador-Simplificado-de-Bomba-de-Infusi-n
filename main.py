@@ -19,6 +19,7 @@ from pypdevs.simulator import Simulator
 from sistema.sistema_bomba import SistemaBomba
 from logger.event_logger import EventLogger
 from verificacion.verificador_propiedades import VerificadorPropiedades
+from verificacion.reporte_resultados import generar_reporte
 
 from config import (
     ESCENARIO_1_NORMAL,
@@ -90,6 +91,15 @@ def correr_simulacion(num_escenario: int = 1, tiempo: float = 100.0,
             for r in resultados:
                 icon = "✓" if r.cumplida else "✗"
                 print(f"  [{icon}] {r.propiedad} — {r.detalle}")
+
+    if verificar or graficos:
+        reporte = generar_reporte(logger, config, tiempo)
+        if verificar or True:
+            print(f"\n{'─'*60}")
+            print("  Reporte de resultados")
+            print(f"{'─'*60}")
+            for linea in reporte["resumen"]:
+                print(f"  • {linea}")
 
     if graficos:
         from graficos.graficar_resultados import graficar_escenario

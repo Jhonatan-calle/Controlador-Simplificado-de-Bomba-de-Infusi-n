@@ -3,7 +3,8 @@ graficos/graficar_resultados.py
 
 Genera gráficos a partir del EventLogger de una simulación:
   - Subplot 1: Caudal objetivo vs caudal real en el tiempo
-  - Subplot 2: Timeline de eventos (órdenes, alarmas, etc.)
+  - Subplot 2: Estado de la bomba (fases del controlador)
+  - Subplot 3: Timeline de eventos (órdenes, alarmas, etc.)
 """
 
 import os
@@ -11,6 +12,7 @@ import warnings
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from logger.event_logger import EventLogger
+from verificacion.reporte_resultados import generar_reporte, _reconstruir_estados
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +90,52 @@ def _graficar_caudal(ax, logger, tiempo_max):
 
 
 # ---------------------------------------------------------------------------
-# Subplot 2: Timeline de eventos
+# Subplot 2: Estado de la bomba
+# ---------------------------------------------------------------------------
+
+def _graficar_estado(ax, logger, tiempo_max):
+    colores = {
+        "OCIOSO":       "#9E9E9E",
+        "INFUNDIENDO":  "#4CAF50",
+        "ALERTA_BOLSA": "#FFEB3B",
+        "MEDIA":        "#FF9800",
+        "CRITICA":      "#F44336",
+        "PARADA":       "#B71C1C",
+    }
+    orden = ["OCIOSO", "INFUNDIENDO", "ALERTA_BOLSA",
+             "MEDIA", "CRITICA", "PARADA"]
+
+    fases, timeline = _reconstruir_estados(logger, tiempo_max)
+
+    x = [0.0]
+    y = [fases["OCIOSO"]]
+    for t, fase in timeline:
+        x.append(t)
+        y.append(y[-1])
+        x.append(t)
+        y.append(fases[fase])
+    x.append(tiempo_max)
+    y.append(y[-1])
+
+    colores_linea = [colores.get(orden[int(v)], "#999") for v in set(y)]
+    ax.plot(x, y, drawstyle='steps-post', color="#333", linewidth=2.0)
+
+    for i in range(len(x) - 1):
+        if x[i+1] > x[i]:
+            ax.axvspan(x[i], x[i+1], alpha=0.15,
+                       color=colores[orden[int(y[i])]])
+
+    ax.set_ylabel("Estado")
+    ax.set_xlim(0, tiempo_max)
+    ax.set_ylim(-0.5, len(orden) - 0.5)
+    ax.set_yticks(range(len(orden)))
+    ax.set_yticklabels(orden, fontsize=8)
+    ax.grid(True, axis="x", alpha=0.3)
+    ax.set_title("Estado de la bomba", fontsize=12)
+
+
+# ---------------------------------------------------------------------------
+# Subplot 3: Timeline de eventos
 # ---------------------------------------------------------------------------
 
 def _graficar_timeline(ax, logger, tiempo_max):
@@ -219,8 +266,8 @@ def graficar_escenario(logger, num_escenario, nombre, tiempo_sim,
                        config=None, resultados=None,
                        dir_salida="graficos", mostrar=True):
     """
-    Genera figura con 2 subplots (caudal + timeline) + descripción textual
-    y la guarda en ``dir_salida/escenario_{num}_{slug}.png``.
+    Genera figura con 3 subplots (caudal + estado + timeline) + descripción
+    textual y la guarda en ``dir_salida/escenario_{num}_{slug}.png``.
 
     Parámetros:
         logger — EventLogger con los datos de la simulación
@@ -239,22 +286,30 @@ def graficar_escenario(logger, num_escenario, nombre, tiempo_sim,
         print(f"  [graficos] Escenario {num_escenario}: sin datos, saltando")
         return
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), sharex=False)
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 10),
+                                         sharex=False)
     fig.suptitle(f"Escenario {num_escenario}: {nombre}",
                  fontsize=14, fontweight="bold")
 
     _graficar_caudal(ax1, logger, tiempo_sim)
-    _graficar_timeline(ax2, logger, tiempo_sim)
+    _graficar_estado(ax2, logger, tiempo_sim)
+    _graficar_timeline(ax3, logger, tiempo_sim)
+    ax3.set_xlabel("Tiempo (s)")
+
+    # Reporte de métricas
+    reporte = generar_reporte(logger, config, tiempo_sim) if config else None
 
     # Texto descriptivo al pie de la figura
     if config:
         desc = _describir_escenario(config, resultados)
+        if reporte and reporte.get("resumen"):
+            desc += "\n" + " | ".join(reporte["resumen"])
         fig.text(0.5, 0.005, desc, ha="center", va="bottom",
-                 fontsize=7, family="monospace",
+                 fontsize=6.5, family="monospace",
                  bbox=dict(boxstyle="round,pad=0.4",
                            facecolor="lightyellow", alpha=0.85))
 
-    plt.tight_layout(rect=[0, 0.06, 1, 0.96])
+    plt.tight_layout(rect=[0, 0.08, 1, 0.96])
 
     # Guardar PNG
     os.makedirs(dir_salida, exist_ok=True)
