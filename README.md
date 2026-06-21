@@ -1,55 +1,147 @@
-# Controlador Simplificado de Bomba de Infusión
+# Simulador DEVS de Bomba de Infusión Intravenosa
 
-Este proyecto utiliza la herramienta **PythonPDEVS** para la simulación de eventos discretos. A continuación, se detallan los pasos necesarios para configurar el entorno virtual de Python e instalar las dependencias con sus versiones exactas en entornos Linux.
+Simulador de eventos discretos basado en el formalismo **DEVS** (Discrete Event System Specification) que modela el control y monitoreo de una bomba de infusión intravenosa. Utiliza **PythonPDEVS** como motor de simulación.
 
-## 🚀 Requisitos Previos
+## Requisitos
 
-* **Python 3.12** o superior
+- **Python 3.12+** (probado en Python 3.14)
+- **pip** y **venv** (incluidos en la instalación estándar de Python)
+- **Git** (para clonar el repositorio)
 
----
+## Instalación
 
-## 🛠️ Guía de Instalación y Configuración
-
-Siga estos pasos en la terminal desde la raíz del proyecto para crear un entorno aislado y ejecutar la simulación:
-
-### 1. Clonar el repositorio (si aún no lo ha hecho)
 ```bash
-git clone https://github.com/Jhonatan-calle/Controlador-Simplificado-de-Bomba-de-Infusi-n.git
-cd Controlador-Simplificado-de-Bomba-de-Infusi-n
-```
+# 1. Clonar el repositorio
+git clone <repo-url>
+cd proyecto
 
-### 2. Crear el entorno virtual
-Cree un entorno virtual de Python para evitar conflictos con librerías globales:
-```bash
+# 2. Crear y activar el entorno virtual
 python3 -m venv venv
-```
-
-### 3. Activar el entorno virtual
-Active el entorno en su sesión de terminal actual:
-```bash
 source venv/bin/activate
-```
-*(Notará el prefijo `(venv)` al inicio de su línea de comandos).*
 
-### 4. Instalar las dependencias
-Instale `setuptools` (requerido para la compatibilidad del instalador de PyDEVS con Python moderno) junto con el módulo local de la herramienta de forma automática:
-```bash
+# 3. Instalar dependencias
 pip install -r requirements.txt
 ```
 
----
+## Estructura del proyecto
 
-## 🧪 Ejecución de la Simulación
-
-Una vez que el entorno esté configurado y activo, puede ejecutar el script principal del controlador de la bomba de infusión mediante el siguiente comando:
-
-```bash
-python3 main.py
+```
+proyecto/
+├── main.py                          # Punto de entrada
+├── config.py                        # Constantes y configuración de escenarios
+├── requirements.txt                 # Dependencias
+├── README.md
+├── modelos/
+│   ├── controlador_bomba.py         # Lógica central del controlador
+│   ├── actuador_bomba.py            # Interfaz física con latencia 0.5s
+│   ├── sensor_flujo.py              # Muestreo cada 1s con deriva y ruido
+│   ├── modulo_alarmas.py            # Gestión y repetición de alarmas
+│   ├── generador_ordenes.py         # Generación autónoma de órdenes
+│   ├── generador_fin_bolsa.py       # Evento de fin de bolsa (one-shot)
+│   └── generador_confirmacion.py    # Confirmación del enfermero
+├── sistema/
+│   └── sistema_bomba.py             # Modelo acoplado (CoupledDEVS)
+├── logger/
+│   └── event_logger.py              # Captura de eventos de simulación
+├── verificacion/
+│   └── verificador_propiedades.py   # 10 verificaciones (P1-P10)
+├── graficos/
+│   └── graficar_resultados.py       # Generación de gráficos (matplotlib)
+├── tests/
+│   ├── conftest.py                  # Fixtures de pytest
+│   ├── test_confirmacion.py
+│   ├── test_fin_bolsa.py
+│   ├── test_integracion.py
+│   └── test_modulo_alarmas.py
+├── graficos/                        # PNGs generados (output)
+└── PythonPDEVS/src/pypdevs/         # Motor de simulación (dependencia local)
 ```
 
-## 🛑 Desactivar el Entorno
+## Uso
 
-Cuando finalice la revisión del proyecto, puede salir del entorno virtual ejecutando simplemente:
+### Ejecución básica
+
+```bash
+# Escenario por defecto (operación normal, 100s)
+python main.py
+
+# Escenario específico
+python main.py --escenario 5
+```
+
+### Escenarios disponibles
+
+| #  | Nombre                         | Descripción                                |
+|----|--------------------------------|--------------------------------------------|
+| 1  | Operación normal               | Órdenes determinísticas, sin fallas        |
+| 2  | Cambio de orden médica         | Órdenes estocásticas con cambios           |
+| 3  | Orden con caudal = 0           | Detención programada                       |
+| 4  | Desvío leve (< 5 s)            | Desvío corregido antes de la alarma        |
+| 5  | Desvío grave (> 5 s)           | Desvío persistente → alarma crítica        |
+| 6  | Fin de bolsa (determinístico)  | Fin de bolsa en tiempo fijo                |
+| 7  | Alarma crítica sin confirmación| Alarma crítica que se repite cada 10s      |
+| 8  | Fin de bolsa (estocástico)     | Fin de bolsa con tiempo aleatorio          |
+
+### Flags
+
+```bash
+# Verificar propiedades de seguridad y liveness
+python main.py --escenario 5 --verificar
+
+# Mostrar eventos en tiempo real
+python main.py --escenario 5 --verbose
+
+# Generar gráficos (PNG en graficos/)
+python main.py --escenario 5 --graficos
+
+# Combinar flags
+python main.py --escenario 5 --verificar --graficos
+
+# Duración personalizada
+python main.py --tiempo 200
+```
+
+### Verificaciones (P1-P10)
+
+| Propiedad | Tipo | Descripción |
+|-----------|------|-------------|
+| P1 | Safety | Caudal cero: última orden no debe ser caudal cero |
+| P2 | Safety | Caudal máximo: ningún caudal supera 200 ml/h |
+| P3 | Safety | Crítica sin confirmación: no hay ajustes tras crítica |
+| P4 | Liveness | Orden produce acción: toda orden > 0 genera un ajuste |
+| P5 | Liveness | Crítica se repite: críticas sin confirmación se retransmiten |
+| P6 | Liveness | Fin de bolsa detiene: fin de bolsa seguido de detención |
+| P7 | Temporal | Inicio de infusión: ajuste < 3s tras la orden |
+| P8 | Temporal | Alarma media en 5s: tiempo correcto de alarma por desvío |
+| P9 | Temporal | Fin de bolsa 60s: detención dentro del tiempo límite |
+| P10 | Temporal | Crítica repite cada 10s: período correcto de retransmisión |
+
+## Arquitectura
+
+### Modelo acoplado
+
+```
+GeneradorOrdenes ──ordenMedica──→ ControladorBomba ──ajustarCaudal──→ ActuadorBomba
+                                      ↑                               │
+                                      │                          caudalActual
+                                      │                               ↓
+GeneradorFinBolsa ──finBolsa──────→ ControladorBomba ←─sensorFlujo── SensorFlujo
+                                      │
+GeneradorConfirmacion ──confirmacion→ ControladorBomba
+                                      │
+                                      └──alarma──→ ModuloAlarmas
+```
+
+### Componentes
+
+- **ControladorBomba**: Cerebro del sistema. Gestiona estados (`OCIOSO`, `INFUNDIENDO`, `ALARMA_MEDIA`, `ALARMA_CRITICA`, `PARADA_POR_BOLSA`) y temporizadores de desvío (5s) y fin de bolsa (60s).
+- **ActuadorBomba**: Interfaz física con latencia de 0.5s y factor de falla configurable.
+- **SensorFlujo**: Muestrea cada 1s con deriva (2%/s) y ruido gaussiano opcional.
+- **ModuloAlarmas**: Repite alarmas críticas no confirmadas (30s luego 10s).
+- **Generadores**: Autónomos, sin entradas. Emiten órdenes, fin de bolsa, y confirmaciones.
+
+## Desactivar entorno
+
 ```bash
 deactivate
 ```

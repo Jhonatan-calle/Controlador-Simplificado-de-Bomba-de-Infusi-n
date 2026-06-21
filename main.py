@@ -6,6 +6,7 @@ Uso:
     python main.py --escenario 6        # escenario fin de bolsa
     python main.py --escenario 7        # escenario alarma crítica
     python main.py --tiempo 120         # duración de simulación en segundos
+    python main.py --graficos            # generar gráficos al finalizar
 """
 
 import argparse
@@ -54,14 +55,15 @@ NOMBRES = {
 
 
 def correr_simulacion(num_escenario: int = 1, tiempo: float = 100.0,
-                      verbose: bool = False, verificar: bool = False):
+                      verbose: bool = False, verificar: bool = False,
+                      graficos: bool = False):
     config = ESCENARIOS[num_escenario]
     nombre = NOMBRES[num_escenario]
 
     print(f"\n{'='*60}")
     print(f"  Escenario {num_escenario}: {nombre}")
     print(f"  Duración: {tiempo} s")
-    print(f"  {'[verbose] ' if verbose else ''}{'[verificar] ' if verificar else ''}")
+    print(f"  {'[verbose] ' if verbose else ''}{'[verificar] ' if verificar else ''}{'[graficos] ' if graficos else ''}")
     print(f"{'='*60}\n")
 
     logger = EventLogger()
@@ -83,6 +85,10 @@ def correr_simulacion(num_escenario: int = 1, tiempo: float = 100.0,
             icon = "✓" if r.cumplida else "✗"
             print(f"  [{icon}] {r.propiedad} — {r.detalle}")
 
+    if graficos:
+        from graficos.graficar_resultados import graficar_escenario
+        graficar_escenario(logger, num_escenario, nombre, tiempo)
+
     print(f"\n{'='*60}")
     print("  Simulación completada")
     print(f"{'='*60}\n")
@@ -99,7 +105,10 @@ if __name__ == "__main__":
                         help="Muestra eventos en tiempo real")
     parser.add_argument("--verificar", action="store_true",
                         help="Verifica propiedades al finalizar")
+    parser.add_argument("--graficos", action="store_true",
+                        help="Genera gráficos al finalizar")
     args = parser.parse_args()
 
     correr_simulacion(args.escenario, args.tiempo,
-                      verbose=args.verbose, verificar=args.verificar)
+                      verbose=args.verbose, verificar=args.verificar,
+                      graficos=args.graficos)

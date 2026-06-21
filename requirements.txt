@@ -1,3 +1,5 @@
 ./PythonPDEVS/src
 setuptools==82.0.1
 pytest==7.4.4
+matplotlib>=3.8
+
