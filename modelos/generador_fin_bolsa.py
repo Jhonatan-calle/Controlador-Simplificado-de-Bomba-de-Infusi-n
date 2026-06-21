@@ -30,7 +30,7 @@ class GeneradorFinBolsa(AtomicDEVS):
         if self._modo == "deterministico":
             sigma_inicial = cfg["tiempo_fijo"]
         else:
-            self._rng   = random.Random(cfg["semilla"])#Cambiar para hacer nuestro propio Random
+            self._rng   = random.Random(cfg["semilla"])
             self._media = cfg["media"]
             self._std   = cfg["desvio_std"]
             sigma_inicial = round(max(0.1, self._rng.gauss(self._media, self._std)), 3)

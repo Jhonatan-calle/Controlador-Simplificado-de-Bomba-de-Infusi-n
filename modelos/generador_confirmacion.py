@@ -6,7 +6,7 @@ Sin entradas. Simula el reconocimiento manual del personal médico.
 """
 
 import math
-import random  #LUEGO CAMBIAR A PROPIO RANDOM
+import random  
 from pypdevs.DEVS import AtomicDEVS
 from pypdevs.infinity import INFINITY
 
@@ -36,7 +36,7 @@ class GeneradorConfirmacion(AtomicDEVS):
         
         else:
             
-            self._rng = random.Random(cfg["semilla"])#LUEGO CAMBIAR A PROPIO RANDOM
+            self._rng = random.Random(cfg["semilla"])
             self._mu = cfg["mu"]
             self._sigma_ln = cfg["sigma_ln"]
             sigma_inicial = (
