@@ -360,6 +360,34 @@ ESCENARIO_9_ESTOCASTICO_COMPLETO = {
     },
 }
 
+
+
+# ---------------------------------------------------------------------------
+# ESCENARIO 10 — Desvío grave con múltiples confirmaciones del enfermero
+# ---------------------------------------------------------------------------
+ESCENARIO_10_CONFIRMACIONES = {
+    "ordenes": {
+        "modo": "deterministico",
+        "caudal_fijo": 100.0,
+        "interarribo_fijo": 30.0,  # Órdenes en t=30, t=60, t=90
+    },
+    "fin_bolsa": {
+        "modo": "deterministico",
+        "tiempo_fijo": INFINITY,
+    },
+    "confirmacion": {
+        "modo": "deterministico",
+        "tiempo_fijo": 25.0,  # El enfermero confirma en t=25, t=50, t=75, t=100
+        "max_confirmaciones": 5,
+    },
+    "actuador": {
+        "factor_falla": 0.80,  # Falla constante para forzar alarmas
+    },
+    "sensor": {
+        "ruido_std": 0.0,
+    },
+}
+
 # ---------------------------------------------------------------------------
 # Lista de todos los escenarios determinísticos (para parametrize en pytest)
 # ---------------------------------------------------------------------------
@@ -371,6 +399,7 @@ TODOS_ESCENARIOS_DETERMINISTICOS = [
     ("desvio_grave", ESCENARIO_5_DESVIO_GRAVE),
     ("fin_bolsa", ESCENARIO_6_FIN_BOLSA),
     ("alarma_critica", ESCENARIO_7_ALARMA_CRITICA),
+    ("confirmaciones", ESCENARIO_10_CONFIRMACIONES),
 ]
 
 # ---------------------------------------------------------------------------

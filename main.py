@@ -31,6 +31,7 @@ from config import (
     ESCENARIO_7_ALARMA_CRITICA,
     ESCENARIO_6_FIN_BOLSA_ESTOCASTICO,
     ESCENARIO_9_VIOLACION,
+    ESCENARIO_10_CONFIRMACIONES,
 )
 
 ESCENARIOS = {
@@ -43,6 +44,7 @@ ESCENARIOS = {
     7: ESCENARIO_7_ALARMA_CRITICA,
     8: ESCENARIO_6_FIN_BOLSA_ESTOCASTICO,
     9: ESCENARIO_9_VIOLACION,
+    10: ESCENARIO_10_CONFIRMACIONES
 }
 
 NOMBRES = {
@@ -55,6 +57,7 @@ NOMBRES = {
     7: "Alarma crítica sin confirmación",
     8: "Fin de bolsa (estocástico)",
     9: "Violación deliberada de seguridad",
+    10: "Varias Confirmaciones Medicas"
 }
 
 
