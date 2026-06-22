@@ -160,24 +160,38 @@ class VerificadorPropiedades:
 
     def p_liveness_orden_produce_accion(self) -> ResultadoVerificacion:
         """
-        Toda ordenMedica debe producir ajustarCaudal o detenerBomba.
+        Toda ordenMedica válida (no bloqueada) debe producir ajustarCaudal o detenerBomba.
         """
         ordenes = self.log.filtrar_puerto("ordenMedica")
+        evidencia = []
+        max_time = self.log.todos()[-1].tiempo if self.log.todos() else 0.0
+        
         for orden in ordenes:
+            if self._esta_bloqueada(orden.tiempo):
+                continue  # Es correcto que sea ignorada
+                
             t = orden.tiempo
             acciones = [e for e in self.log.todos()
                         if e.puerto in ("ajustarCaudal", "detenerBomba")
-                        and e.tiempo - t <= TIEMPO_INICIO_INFUSION]
+                        and t <= e.tiempo <= t + TIEMPO_INICIO_INFUSION + T]
+                        
             if not acciones:
-                return ResultadoVerificacion(
-                    "P4: Liveness — orden produce acción",
-                    False,
-                    f"Orden en t={t} sin acción asociada",
-                    [orden],
-                )
+                # NUEVO: Si la simulación terminó antes de que expirara el tiempo de gracia, se perdona
+                if t + TIEMPO_INICIO_INFUSION > max_time:
+                    continue
+                evidencia.append(orden)
+                
+        if evidencia:
+            return ResultadoVerificacion(
+                "P4: Liveness — orden produce acción",
+                False,
+                "Órdenes válidas sin acción asociada",
+                evidencia,
+            )
+            
         return ResultadoVerificacion(
             "P4: Liveness — orden produce acción",
-            True, "Todas las órdenes produjeron acción"
+            True, "Todas las órdenes válidas produjeron acción"
         )
 
     def p_liveness_critica_se_repite(self) -> ResultadoVerificacion:
@@ -248,24 +262,31 @@ class VerificadorPropiedades:
 
     def p_temporal_inicio_infusion(self) -> ResultadoVerificacion:
         """
-        ordenMedica > 0 → ajustarCaudal debe ocurrir en < TIEMPO_INICIO_INFUSION s.
+        ordenMedica > 0 → ajustarCaudal debe ocurrir en < TIEMPO_INICIO_INFUSION s,
+        siempre y cuando la bomba no esté bloqueada por seguridad.
         """
         ordenes = self.log.filtrar_puerto("ordenMedica")
-        max_time = max(e.tiempo for e in self.log.todos()) if self.log.todos() else 0.0
+        max_time = self.log.todos()[-1].tiempo if self.log.todos() else 0.0
+        
         for orden in ordenes:
-            if orden.valor <= 0:
+            # Ignoramos órdenes de detener o si la bomba está bloqueada
+            if orden.valor <= 0 or self._esta_bloqueada(orden.tiempo):
                 continue
-            if orden.tiempo + TIEMPO_INICIO_INFUSION > max_time:
-                continue
+                
             ajustes = [e for e in self.log.filtrar_puerto("ajustarCaudal")
                        if e.tiempo >= orden.tiempo]
+            
             if not ajustes:
+                
+                if orden.tiempo + TIEMPO_INICIO_INFUSION > max_time:
+                    continue
                 return ResultadoVerificacion(
                     "P7: Temporal — inicio de infusión",
                     False,
                     f"Orden en t={orden.tiempo} sin ajuste posterior",
                     [orden],
                 )
+                
             demora = ajustes[0].tiempo - orden.tiempo
             if demora > TIEMPO_INICIO_INFUSION + T:
                 return ResultadoVerificacion(
@@ -274,6 +295,7 @@ class VerificadorPropiedades:
                     f"Demora de {demora:.2f}s supera límite de {TIEMPO_INICIO_INFUSION}s",
                     [orden, ajustes[0]],
                 )
+                
         return ResultadoVerificacion(
             "P7: Temporal — inicio de infusión",
             True, "Todas las infusiones iniciaron a tiempo"
@@ -395,3 +417,25 @@ class VerificadorPropiedades:
             f"{len(criticas)} notificaciones, gaps correctos "
             f"(1er gap={gap1:.1f}s, resto≈{PERIODO_REP_CRITICA}s)"
         )
+
+    def _esta_bloqueada(self, t: float) -> bool:
+        """Verifica si en el tiempo t la bomba estaba bloqueada por seguridad."""
+        criticas = [e.tiempo for e in self.log.filtrar_puerto("alarma") if e.valor == "critica"]
+        fines = self.log.tiempos_de("finBolsa")
+        
+        # El bloqueo de bolsa vacía ocurre TIEMPO_MAX_FIN_BOLSA segundos después de finBolsa
+        bloqueos_bolsa = [t_fin + TIEMPO_MAX_FIN_BOLSA for t_fin in fines]
+        
+        todos_bloqueos = sorted(criticas + bloqueos_bolsa)
+        bloqueos_previos = [b for b in todos_bloqueos if b <= t]
+        
+        if not bloqueos_previos:
+            return False
+            
+        ultimo_bloqueo = max(bloqueos_previos)
+        
+        # Revisar si un enfermero destrabó la bomba después del bloqueo y antes de la orden
+        confirmaciones = [c for c in self.log.tiempos_de("confirmacionEnfermero") 
+                          if ultimo_bloqueo <= c <= t]
+        
+        return len(confirmaciones) == 0
