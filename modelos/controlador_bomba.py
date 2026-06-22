@@ -234,6 +234,7 @@ class ControladorBomba(AtomicDEVS):
             nuevo["caudalObjetivo"] = 0.0
             nuevo["fase"]          = PARADA_POR_BOLSA
             nuevo["t_bolsa"]       = INFINITY
+            nuevo["t_desvio"]      = INFINITY
             nuevo["sigma"]         = 0.0
             return nuevo
 
