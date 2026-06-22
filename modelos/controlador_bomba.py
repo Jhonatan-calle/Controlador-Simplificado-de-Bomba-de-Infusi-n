@@ -23,6 +23,8 @@ ALERTA_BOLSA  = "ALERTA_BOLSA"
 ALARMA_MEDIA  = "ALARMA_MEDIA"
 ALARMA_CRITICA = "ALARMA_CRITICA"
 PARADA_POR_BOLSA = "PARADA_POR_BOLSA"
+BOLSA_VACIA = "BOLSA_VACIA"
+
 
 def _clamp_caudal(valor: float) -> float:
     return max(0.0, min(CAUDAL_MAX, valor))
@@ -134,6 +136,11 @@ class ControladorBomba(AtomicDEVS):
  
         # --- Orden médica ---
         if self.ordenMedica in inputs:
+               
+            if s["fase"] in(ALARMA_CRITICA, BOLSA_VACIA):
+                nuevo["sigma"] = sigma_restante
+                return nuevo            
+    
             valor = inputs[self.ordenMedica]
             
             if valor > 0.0:
@@ -198,7 +205,7 @@ class ControladorBomba(AtomicDEVS):
         # --- Confirmación del enfermero ---
         if self.confirmacionEnfermero in inputs:
             
-            if s["fase"] == ALARMA_CRITICA:
+            if s["fase"] in (ALARMA_CRITICA,BOLSA_VACIA):
                 
                 nuevo["fase"] = OCIOSO
                 nuevo["sigma"] = 0.0
@@ -216,7 +223,7 @@ class ControladorBomba(AtomicDEVS):
         
         return nuevo
 
-    def intTransition(self) -> dict:
+    def intTransition(self):
         
         s = self.state
         nuevo = dict(s)
@@ -260,7 +267,7 @@ class ControladorBomba(AtomicDEVS):
         # 3. Tras emitir PARADA_POR_BOLSA → volver a OCIOSO
         if s["fase"] == PARADA_POR_BOLSA:
 
-            nuevo["fase"] = OCIOSO
+            nuevo["fase"] = BOLSA_VACIA
             nuevo["sigma"] = INFINITY
             return nuevo 
 
