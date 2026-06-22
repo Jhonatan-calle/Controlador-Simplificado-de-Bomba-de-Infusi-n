@@ -281,7 +281,7 @@ ESCENARIO_7_ALARMA_CRITICA = {
     "ordenes": {
         "modo": "deterministico",
         "caudal_fijo": 100.0,
-        "interarribo_fijo": INFINITY,
+        "interarribo_fijo": INTERARRIBO_ORDENES,
     },
     "fin_bolsa": {
         "modo": "deterministico",
@@ -293,7 +293,7 @@ ESCENARIO_7_ALARMA_CRITICA = {
         "max_confirmaciones": 0,
     },
     "actuador": {
-        "factor_falla": 1.0,
+        "factor_falla": 0.80,
     },
     "sensor": {
         "ruido_std": 0.0,
